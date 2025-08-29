@@ -1,3 +1,8 @@
+""""
+ChatGPT was used to explain some of the functionality of pygame as well as generate a non minesweeper example which was then replaced by 
+minesweeper code written by us.
+"""
+
 import pygame
 import sys
 
