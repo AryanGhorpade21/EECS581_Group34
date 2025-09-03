@@ -1,0 +1,12 @@
+Parts of Minesweeper
+
+
+Chloe: Flagging functionality, clicking the bombs, game over, 
+Aryan: Numbers around mines
+Ibrahim: make the UI
+David: generate the starting configuration
+Roop: Integration of all the parts
+
+
+
+Need to get calendar for when things are done
