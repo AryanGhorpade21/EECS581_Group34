@@ -5,7 +5,7 @@ Chloe: Flagging functionality, clicking the bombs, game over,
 Aryan: Numbers around mines
 Ibrahim: make the UI
 David: generate the starting configuration
-Roop: Integration of all the parts
+Dylan and Roop: Integration of all the parts
 
 
 
