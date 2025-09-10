@@ -1,0 +1,5 @@
+Work for next week 9/10
+
+David/Roop/Dylan: source code and dependecies
+David: integrating functions
+Ibrahim: improve documentation of scaffold ui
