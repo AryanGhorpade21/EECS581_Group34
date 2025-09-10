@@ -57,8 +57,7 @@ class Game:
         return False
 
     def _flood_fill(self, r: int, c: int):
-        """Flood all nearby zero-adjacent cells and their numbered borders.
-        """
+        """Flood all nearby zero-adjacent cells and their numbered borders."""
         # stacking
         stack: List[Tuple[int, int]] = [(r, c)]
         visited: Set[Tuple[int, int]] = {(r, c)}
@@ -76,7 +75,7 @@ class Game:
 
     # --- Mine placement ---
     def _place_mines(self, safe_cells: Set[Tuple[int, int]]):
-        """Place mines randomly except safe.cells, find adjacency counts."""
+        """Place mines randomly except safe_cells, find adjacency counts."""
         size = self.board.size
         all_positions = [(r, c) for r in range(size) for c in range(size) if (r, c) not in safe_cells]
         random.shuffle(all_positions)
@@ -133,7 +132,7 @@ class Game:
         return False, "Cell revealed."
 
     def _chord(self, r: int, c: int) -> Tuple[bool, str]:
-        """"Auto-reveal hidden neighbors if correctly flagged numbered cell adj mines"""
+        """Auto-reveal hidden neighbors if correctly flagged numbered cell adj mines"""
         cell = self.board._grid[r][c]
         flags = 0
         hidden_neighbors: List[Tuple[int, int]] = []
