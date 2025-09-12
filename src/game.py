@@ -13,7 +13,6 @@ Cell dict: mine (bool), revealed (bool), flagged (bool), srr (int)
 Iterative flood fill instead of recursion.
 """
 
-from __future__ import annotations
 from typing import List, Tuple, Dict, Any
 
 MINE_VALUE = -1
@@ -138,7 +137,7 @@ def text_render(state: Dict[str, Any], reveal_mines: bool = False) -> str:
                 if cell['mine']:
                     parts.append('*')
                 else:
-                    parts.append(str(cell['srr_sort']) if cell['srr_sort'] > 0 else ' ')
+                    parts.append(str(cell['srr']) if cell['srr'] > 0 else ' ')
             else:
                 if cell['flagged']:
                     parts.append('F')
