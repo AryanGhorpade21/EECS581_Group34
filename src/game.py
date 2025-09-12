@@ -1,185 +1,178 @@
-"""game.py - Minesweeper game logic (no input/print here)
+"""Minesweeper game logic.
 
-Provides: reveal(), toggle_flag(), remaining_flags(), status_line(), render().
-Does:
-    - Reveal cells (single, zero flood fill, chording re-click on numbers)
-    - Track flags & revealed safe cells (flag cap == mine_count)
-    - Detect win (all safe) / loss (mine hit)
+Funcs:
+    create_game(board) -> state dict
+    reveal(state, r, c) -> (finished: bool, message: str)
+    toggle_flag(state, r, c) -> message
+    text_render(state, reveal_mines=False) -> string representation
+    cell_state(state, r, c) -> copy of one cell dict
 
-Board setup must have: size, mine_count, _grid[List[List[Cell]]], _mines_placed,
-    neighbors(r,c), parse_coord(token), render(reveal_mines)
-Cell must have: is_mine, is_revealed, is_flagged, adjacent
+State dict keys: size, mine_count, grid, flags_left, playing, won
+Cell dict: mine (bool), revealed (bool), flagged (bool), srr (int)
 
-Adjustments:
-    - First-click safety area: _ensure_mines_placed()
-    - Disable chording: remove _chord() call in reveal()
-    - Different board size: change Board; this file reads board.size
-
-Note: Wrong flags + chording can trigger an immediate loss.
+Iterative flood fill instead of recursion.
 """
 
-from enum import Enum
-from typing import Tuple, List, Set
-import random
-from board import Board, Cell
+from __future__ import annotations
+from typing import List, Tuple, Dict, Any
 
-class GameStatus(Enum):
-    """Enumeration of overall game states."""
-    PLAYING = "Playing"
-    LOST = "Game Over"
-    WON = "Victory"
+MINE_VALUE = -1
 
-class Game:
-    def __init__(self, mine_count: int):
-        """Initialize game with user-specified mine count (doesn't validate)."""
-        self.board = Board(mine_count)
-        self.status = GameStatus.PLAYING
-        self.flags_placed = 0
-        self._revealed_safe_cells = 0  # count revealed safe cells
 
-    def _reveal_cell(self, r: int, c: int, flood: bool = True) -> bool:
-        """Reveal one cell.
-            flood: If True, perform flood fill from zero-adjacent cells.
-            True if a mine was hit, else False.
-        """
-        cell: Cell = self.board._grid[r][c]
-        if cell.is_revealed or cell.is_flagged:
-            return False
-        # mine placement: only on first actual reveal ensures safety region
-        if not self.board._mines_placed:
-            self._ensure_mines_placed(r, c)
-        cell.is_revealed = True
-        if cell.is_mine:
-            return True
-        self._revealed_safe_cells += 1
-        if flood and cell.adjacent == 0:
-            self._flood_fill(r, c)
-        return False
+def create_game(board: List[List[int]]) -> Dict[str, Any]:
+    """Wrap existing board into game state.
+        board: Square 2D list.
+        Each non-mine cell holds its surrounding mine count (0-8) stored in field 'srr'.
+    """
+    size = len(board)
+    mine_count = 0
+    grid: List[List[Dict[str, Any]]] = []
+    for r in range(size):
+        row_cells: List[Dict[str, Any]] = []
+        for c in range(size):
+            val = board[r][c]
+            if val == MINE_VALUE:
+                mine_count += 1
+            elif not (0 <= val <= 8):  # square grid, max 8 neighbors.
+                raise ValueError("Non-mine cells must have surrounding mine count 0-8.")
+            row_cells.append({
+                'mine': val == MINE_VALUE,
+                'revealed': False,
+                'flagged': False,
+                'srr': 0 if val == MINE_VALUE else val,
+            })
+        grid.append(row_cells)
 
-    def _flood_fill(self, r: int, c: int):
-        """Flood all nearby zero-adjacent cells and their numbered borders.
-        """
-        # stacking
-        stack: List[Tuple[int, int]] = [(r, c)]
-        visited: Set[Tuple[int, int]] = {(r, c)}
-        while stack:
-            cr, cc = stack.pop()
-            for nr, nc in self.board.neighbors(cr, cc):
-                ncell = self.board._grid[nr][nc]
-                if ncell.is_revealed or ncell.is_flagged or ncell.is_mine:
-                    continue
-                ncell.is_revealed = True
-                self._revealed_safe_cells += 1
-                if ncell.adjacent == 0 and (nr, nc) not in visited:
-                    stack.append((nr, nc))
-                    visited.add((nr, nc))
+    return {
+        'size': size,
+        'mine_count': mine_count,
+        'grid': grid,
+        'flags_left': mine_count,
+        'playing': True,
+        'won': False,
+    }
 
-    # --- Mine placement ---
-    def _place_mines(self, safe_cells: Set[Tuple[int, int]]):
-        """Place mines randomly except safe.cells, find adjacency counts."""
-        size = self.board.size
-        all_positions = [(r, c) for r in range(size) for c in range(size) if (r, c) not in safe_cells]
-        random.shuffle(all_positions)
-        for (r, c) in all_positions[: self.board.mine_count]:
-            self.board._grid[r][c].is_mine = True
-        # adjacency counts
-        for r in range(size):
-            for c in range(size):
-                cell = self.board._grid[r][c]
-                if cell.is_mine:
-                    continue
-                cell.adjacent = sum(1 for nr, nc in self.board.neighbors(r, c) if self.board._grid[nr][nc].is_mine)
-        self.board._mines_placed = True
+def _neighbors(state: Dict[str, Any], r: int, c: int):
+    size = state['size']
+    for rr in range(max(0, r - 1), min(size, r + 2)):
+        for cc in range(max(0, c - 1), min(size, c + 2)):
+            if (rr, cc) != (r, c):
+                yield rr, cc
 
-    def _ensure_mines_placed(self, first_r: int, first_c: int):
-        """Ensure mines placed with first-click safety around (first_r, first_c)."""
-        if self.board._mines_placed:
-            return
-        safe = {(first_r, first_c)} | set(self.board.neighbors(first_r, first_c))
-        self._place_mines(safe)
 
-    def _check_win(self) -> bool:
-        """Check win condition: all safe cells are revealed"""
-        total_safe = self.board.size * self.board.size - self.board.mine_count
-        if self._revealed_safe_cells == total_safe:
-            self.status = GameStatus.WON
-            return True
-        return False
+def reveal(state: Dict[str, Any], r: int, c: int) -> Tuple[bool, str]:
+    if not state['playing']:
+        return True, "Game already finished."
+    size = state['size']
+    if not (0 <= r < size and 0 <= c < size):
+        return False, "Out of bounds."
+    cell = state['grid'][r][c]
+    if cell['flagged']:
+        return False, "Cell is flagged."
+    if cell['revealed']:
+        return False, "Already revealed."
+    cell['revealed'] = True
+    if cell['mine']:
+        state['playing'] = False
+        return True, "Mine hit"
+    if cell['srr'] == 0:
+        _flood_fill(state, r, c)
+    if _check_win(state):
+        state['playing'] = False
+        state['won'] = True
+        return True, "You won"
+    return False, "Revealed."
 
-    def remaining_flags(self) -> int:
-        return self.board.mine_count - self.flags_placed
 
-    def reveal(self, coord: str) -> Tuple[bool, str]:
-        if self.status != GameStatus.PLAYING:
-            return False, "Game already over."
-        parsed = self.board.parse_coord(coord)
-        if not parsed:
-            return False, "Invalid. Example: A1 or J10."
-        r, c = parsed
-        cell = self.board._grid[r][c]
-        if cell.is_flagged:
-            return False, "Cell is flagged. Unflag first."
-        if cell.is_revealed:
-            # Chording attempt if it's a numbered cell
-            if cell.adjacent > 0:
-                return self._chord(r, c)
-            return False, "Cell already revealed."
-        hit_mine = self._reveal_cell(r, c)
-        if hit_mine:
-            self.status = GameStatus.LOST
-            return True, "Mine hit"
-        if self._check_win():
-            return False, "All safe cells revealed."
-        return False, "Cell revealed."
+def _flood_fill(state: Dict[str, Any], r: int, c: int):
+    stack = [(r, c)]
+    visited = set(stack)
+    while stack:
+        cr, cc = stack.pop()
+        for nr, nc in _neighbors(state, cr, cc):
+            cell = state['grid'][nr][nc]
+            if cell['revealed'] or cell['flagged'] or cell['mine']:
+                continue
+            cell['revealed'] = True
+            if cell['srr'] == 0 and (nr, nc) not in visited:
+                visited.add((nr, nc))
+                stack.append((nr, nc))
 
-    def _chord(self, r: int, c: int) -> Tuple[bool, str]:
-        """"Auto-reveal hidden neighbors if correctly flagged numbered cell adj mines"""
-        cell = self.board._grid[r][c]
-        flags = 0
-        hidden_neighbors: List[Tuple[int, int]] = []
-        for nr, nc in self.board.neighbors(r, c):
-            ncell = self.board._grid[nr][nc]
-            if ncell.is_flagged:
-                flags += 1
-            elif not ncell.is_revealed:
-                hidden_neighbors.append((nr, nc))
-        if flags != cell.adjacent:
-            return False, "No chording, flag count mismatch."  # not enough flags
-        # Reveal all hidden neighbors
-        for nr, nc in hidden_neighbors:  # auto-reveal each remaining covered neighbor
-            if self._reveal_cell(nr, nc):
-                self.status = GameStatus.LOST
-                return True, "Mine hit during chording."
-        if self._check_win():
-            return False, "All safe cells revealed."
-        return False, "Chording reveal complete."
 
-    def toggle_flag(self, coord: str) -> str:
-        if self.status != GameStatus.PLAYING:
-            return "Game already finished."
-        parsed = self.board.parse_coord(coord)
-        if not parsed:
-            return "Invalid. Example: A1 or J10."
-        r, c = parsed
-        cell = self.board._grid[r][c]
-        if cell.is_revealed:
-            return "Can't flag a revealed cell."
-        if not cell.is_flagged and self.flags_placed >= self.board.mine_count:
-            return "No flags remaining."
-        was_flagged = cell.is_flagged
-        if was_flagged:
-            cell.is_flagged = False
-            self.flags_placed -= 1
-            return "Flag removed."
-        else:
-            cell.is_flagged = True
-            self.flags_placed += 1
-            return "Flag placed."
+def toggle_flag(state: Dict[str, Any], r: int, c: int) -> str:
+    if not state['playing']:
+        return "Game is over."
+    if not (0 <= r < state['size'] and 0 <= c < state['size']):
+        return "Out of bounds."
+    cell = state['grid'][r][c]
+    if cell['revealed']:
+        return "Can't flag revealed cell."
+    if cell['flagged']:
+        cell['flagged'] = False
+        state['flags_left'] += 1
+        return "Flag removed."
+    if state['flags_left'] == 0:
+        return "No flags left."
+    cell['flagged'] = True
+    state['flags_left'] -= 1
+    return "Flag placed."
 
-    def status_line(self) -> str:
-        """Game status print"""
-        return f"Status: {self.status.value} | Remaining Flags: {self.remaining_flags()}"
 
-    def render(self) -> str:
-        reveal_mines = self.status == GameStatus.LOST
-        return self.board.render(reveal_mines=reveal_mines)
+def _check_win(state: Dict[str, Any]) -> bool:
+    size = state['size']
+    safe_cells = size * size - state['mine_count']
+    revealed = sum(
+        1 for row in state['grid'] for cell in row if cell['revealed'] and not cell['mine']
+    )
+    return revealed == safe_cells
+
+
+def text_render(state: Dict[str, Any], reveal_mines: bool = False) -> str:
+    size = state['size']
+    lines: List[str] = []
+    for r in range(size):
+        parts = []
+        for c in range(size):
+            cell = state['grid'][r][c]
+            if cell['revealed']:
+                if cell['mine']:
+                    parts.append('*')
+                else:
+                    parts.append(str(cell['srr_sort']) if cell['srr_sort'] > 0 else ' ')
+            else:
+                if cell['flagged']:
+                    parts.append('F')
+                elif reveal_mines and cell['mine']:
+                    parts.append('*')
+                else:
+                    parts.append('#')
+        lines.append(' '.join(parts))
+    return '\n'.join(lines)
+
+
+def cell_state(state: Dict[str, Any], r: int, c: int):
+    return dict(state['grid'][r][c])
+
+# Example usage:
+'''
+state = create_game(board)
+print(text_render(state))
+# Reveal a safe zero or number
+finished, msg = reveal(state, 0, 4)  # top-right corner (0)
+print(\"\\nReveal (0,4):\", msg)
+print(text_render(state))
+
+# Flag a suspected mine
+print(\"\\nFlag (0,0):\", toggle_flag(state, 0, 0))
+print(text_render(state))
+
+# Try to reveal a flagged cell (should be blocked)
+finished, msg = reveal(state, 0, 0)
+print(\"Reveal flagged (0,0):\", msg)
+
+# Unflag then reveal the mine to lose
+print(\"Unflag (0,0):\", toggle_flag(state, 0, 0))
+finished, msg = reveal(state, 0, 0)
+print(\"Reveal mine (0,0):\", msg)
+print(text_render(state, reveal_mines=True))  # Show all mines after loss
+'''
