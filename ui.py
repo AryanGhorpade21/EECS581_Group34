@@ -19,6 +19,17 @@ RED = (255, 0, 0)
 GREEN = (0, 160, 0)
 BLUE = (0, 0, 255)
 
+TUTORIAL_TEXT = [
+    "MINESWEEPER",
+    "",
+    "Left Click: Reveal",
+    "Right Click: Flag / Unflag",
+    "R: Restart",
+    "Esc: Quit",
+    "",
+    "Click or press any key to start"
+]
+
 def load_icon(path, size):
     try:
         img = pygame.image.load(path).convert_alpha()
@@ -76,6 +87,23 @@ def draw_cells(surface, state, flag_icon, bomb_icon):
                     surface.blit(flag_icon, (x + 3, y + 3))
                 elif show_mines and cell["mine"]:
                     surface.blit(bomb_icon, (x + 3, y + 3))
+                
+def draw_tutorial(surface):
+    overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+    overlay.fill(GREY + (200,))
+    surface.blit(overlay, (0, 0))
+    font_title = pygame.font.Font(None, 48)
+    font_body = pygame.font.Font(None, 28)
+    y = MENU_HEIGHT + 30
+    for i, line in enumerate(TUTORIAL_TEXT):
+        if i == 0:
+            txt = font_title.render(line, True, WHITE)
+        else:
+            txt = font_body.render(line, True, WHITE)
+        rect = txt.get_rect(center=(WINDOW_WIDTH // 2, y))
+        surface.blit(txt, rect)
+        y += 40
+
 
 def main():
     pygame.init()
@@ -83,33 +111,42 @@ def main():
     pygame.display.set_caption("Minesweeper")
     clock = pygame.time.Clock()
 
-    flag_icon = load_icon("flag.jpeg", CELL_SIZE - 6)
+    flag_icon = load_icon("flag.png", CELL_SIZE - 6)
     bomb_icon = load_icon("bomb.png", CELL_SIZE - 6)
 
     state = new_game()
+    show_tut = True
 
     running = True
     while running:
         screen.fill(BLACK)
+
         draw_menu(screen, state, flag_icon, bomb_icon)
         draw_grid(screen)
         draw_cells(screen, state, flag_icon, bomb_icon)
+
+        if show_tut:
+            draw_tutorial(screen)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 state = new_game()
-            elif event.type == pygame.MOUSEBUTTONDOWN and state["playing"]:
-                x, y = event.pos
-                if y > MENU_HEIGHT:
-                    row = (y - MENU_HEIGHT) // CELL_SIZE
-                    col = x // CELL_SIZE
-                    if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
-                        if event.button == 1:
-                            reveal(state, row, col)
-                        elif event.button == 3:
-                            toggle_flag(state, row, col)
+                show_tut = True
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if show_tut:
+                    show_tut = False
+                elif state["playing"]:
+                    x, y = event.pos
+                    if y > MENU_HEIGHT:
+                        row = (y - MENU_HEIGHT) // CELL_SIZE
+                        col = x // CELL_SIZE
+                        if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
+                            if event.button == 1:
+                                reveal(state, row, col)
+                            elif event.button == 3:
+                                toggle_flag(state, row, col)
 
         pygame.display.flip()
         clock.tick(60)
