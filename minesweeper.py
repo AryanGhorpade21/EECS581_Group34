@@ -10,6 +10,19 @@ def place_mines(num_mines, rows=10, cols=10):
         if (r, c) not in mine_positions:
             mine_positions.add((r, c))
             board[r][c] = -1  # -1 represents a mine
+            # Fill in numbers for non-mine cells
+    
+    for r in range(rows):
+        for c in range(cols):
+            if board[r][c] == -1:
+                continue
+            count = 0
+            for dr in [-1, 0, 1]:
+                for dc in [-1, 0, 1]:
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < rows and 0 <= nc < cols and board[nr][nc] == -1:
+                        count += 1
+            board[r][c] = count
     return board
 
 mines_board = place_mines(20)  # Places 20 mines randomly
