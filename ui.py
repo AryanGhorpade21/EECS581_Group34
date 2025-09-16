@@ -75,6 +75,7 @@ def draw_cells(surface, state, flag_icon, bomb_icon):
 
             if cell["revealed"]:
                 pygame.draw.rect(surface, DARKGREY, rect)
+                pygame.draw.rect(surface, GREY, rect, width=1)
                 if cell["mine"]:
                     surface.blit(bomb_icon, (x + 3, y + 3))
                 elif cell["srr"] > 0:
@@ -83,6 +84,7 @@ def draw_cells(surface, state, flag_icon, bomb_icon):
                     surface.blit(txt, (x + CELL_SIZE // 3, y + CELL_SIZE // 5))
             else:
                 pygame.draw.rect(surface, WHITE, rect)
+                pygame.draw.rect(surface, GREY, rect, width=1)
                 if cell["flagged"]:
                     surface.blit(flag_icon, (x + 3, y + 3))
                 elif show_mines and cell["mine"]:
