@@ -40,10 +40,9 @@ def load_icon(path, size):
         surf.fill((255, 0, 0))
         return surf
 
-def new_game():
-    board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE)
+def new_game(x=None, y=None):
+    board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE,x,y)
     return create_game(board)
-
 def draw_menu(surface, state, flag_icon, bomb_icon):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
@@ -116,7 +115,8 @@ def main():
     flag_icon = load_icon("flag.png", CELL_SIZE - 6)
     bomb_icon = load_icon("bomb.png", CELL_SIZE - 6)
 
-    state = new_game()
+    state = new_game() # dummy state before the first square is clicked
+    state["first_click"] = True
     show_tut = True
 
     running = True
@@ -138,18 +138,20 @@ def main():
                 show_tut = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if show_tut:
-                    show_tut = False
-                elif state["playing"]:
-                    x, y = event.pos
-                    if y > MENU_HEIGHT:
-                        row = (y - MENU_HEIGHT) // CELL_SIZE
-                        col = x // CELL_SIZE
-                        if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
+                    show_tut = False                    
+                x, y = event.pos
+                if y > MENU_HEIGHT:
+                    row = (y - MENU_HEIGHT) // CELL_SIZE
+                    col = x // CELL_SIZE
+                    if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
+                        if state["first_click"]:
+                            state = new_game(x=row, y=col)
+                            state["first_click"] = False
+                        else:
                             if event.button == 1:
                                 reveal(state, row, col)
                             elif event.button == 3:
                                 toggle_flag(state, row, col)
-
         pygame.display.flip()
         clock.tick(60)
 
