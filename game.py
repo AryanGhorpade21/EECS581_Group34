@@ -1,9 +1,9 @@
 import random
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 MINE = -1
 
-def place_mines(num_mines: int, rows: int = 10, cols: int = 10) -> List[List[int]]:
+def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int] = None, y: Optional[int] = None) -> List[List[int]]:
     """Create a new board with mines (-1) and neighbor counts (0–8)."""
     board = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
@@ -14,6 +14,12 @@ def place_mines(num_mines: int, rows: int = 10, cols: int = 10) -> List[List[int
         if (r, c) not in mine_positions:
             mine_positions.add((r, c))
             board[r][c] = MINE
+    # remove mines from spot user clicked and adjacent squares
+    print(x,y)
+    if x and y:
+        for offset_x in [-1, 0, 1]:
+            for offset_y in [-1, 0, 1]:
+                board[x + offset_x][y + offset_y] = None
 
     # Fill counts for non-mine cells
     for r in range(rows):
