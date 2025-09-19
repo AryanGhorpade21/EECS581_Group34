@@ -1,4 +1,0 @@
-
-By 9/10 - Use case diagram, all functions (other than main), 
-
-By 9/17 - Finished dependiceis and the source code
