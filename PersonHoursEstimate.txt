@@ -8,7 +8,9 @@ Dylan: 3
 Chloe: 3
 David: 2
 Ibrahim: 2
-Aryan: [Not reported yet]
+Aryan: 8
+
+Estimated: 21
 
 Actual: 
 Roop: 4
@@ -16,4 +18,6 @@ Dylan: 3
 Chloe: 4
 David: 3
 Ibrahim: 1
-Aryan: [Not reported yet]
+Aryan: 5
+
+Actual Hours: 20
