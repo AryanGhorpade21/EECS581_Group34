@@ -78,7 +78,7 @@ def draw_cells(surface, state, flag_icon, bomb_icon, numbers, empty_icon):
                     surface.blit(bomb_icon, (x + 3, y + 3))
                 elif cell["srr"] > 0:
                     number = int(cell["srr"])
-                    surface.blit(numbers[number], (x + 3, y + 3))
+                    surface.blit(numbers[number-1], (x + 3, y + 3))
             else:
                 
                 if cell["flagged"]:
