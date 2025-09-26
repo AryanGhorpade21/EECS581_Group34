@@ -4,24 +4,29 @@ from typing import List, Dict, Any, Tuple, Optional
 MINE = -1
 
 def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int] = None, y: Optional[int] = None) -> List[List[int]]:
-    """Create a new board with mines (-1) and neighbor counts (0–8)."""
+    """Create a new board with mines (-1) and neighbor counts (0–8).
+    but instead of placing then removing mines near the first click, SKIP that safe
+    3x3 area while placing
+    """
     board = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
 
-    # Place mines
+    # Pre-compute safe zone
+    safe_zone = set()
+    if x is not None and y is not None:
+        for rr in range(max(0, x - 1), min(rows, x + 2)):
+            for cc in range(max(0, y - 1), min(cols, y + 2)):
+                safe_zone.add((rr, cc))
+
+    # Place mines, avoiding safe_zone
     while len(mine_positions) < num_mines:
         r, c = random.randrange(rows), random.randrange(cols)
-        if (r, c) not in mine_positions:
-            mine_positions.add((r, c))
-            board[r][c] = MINE
-    # remove mines from spot user clicked and adjacent squares
-    print(x,y)
-    if x and y:
-        for offset_x in [-1, 0, 1]:
-            for offset_y in [-1, 0, 1]:
-                board[x + offset_x][y + offset_y] = None
+        if (r, c) in mine_positions or (r, c) in safe_zone:
+            continue
+        mine_positions.add((r, c))
+        board[r][c] = MINE
 
-    # Fill counts for non-mine cells
+    # Fill counts
     for r in range(rows):
         for c in range(cols):
             if board[r][c] != MINE:
