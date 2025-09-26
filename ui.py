@@ -27,7 +27,7 @@ TUTORIAL_TEXT = [
     "R: Restart",
     "Esc: Quit",
     "",
-    "Click or press any key to start"
+    "Click to start"
 ]
 
 def load_icon(path, size):
@@ -42,7 +42,9 @@ def load_icon(path, size):
 
 def new_game(x=None, y=None):
     board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE,x,y)
-    return create_game(board)
+    state = create_game(board)
+    state["first_click"] = True
+    return state
 def draw_menu(surface, state, flag_icon, bomb_icon):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
@@ -116,7 +118,6 @@ def main():
     bomb_icon = load_icon("bomb.png", CELL_SIZE - 6)
 
     state = new_game() # dummy state before the first square is clicked
-    state["first_click"] = True
     show_tut = True
 
     running = True
@@ -145,8 +146,10 @@ def main():
                     col = x // CELL_SIZE
                     if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
                         if state["first_click"]:
-                            state = new_game(x=row, y=col)
-                            state["first_click"] = False
+                            if event.button == 1:  # Left click to start
+                                state = new_game(x=row, y=col)
+                                state["first_click"] = False
+                                reveal(state, row, col)
                         else:
                             if event.button == 1:
                                 reveal(state, row, col)
