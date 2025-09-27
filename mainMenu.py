@@ -25,11 +25,11 @@ pygame.display.set_caption("Minesweeper - Main Menu")
 # buttons
 play_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 - 60, 120, 40)
 ai_selector_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 - 10, 120, 40)
-themes_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 40 , 120, 40)
+themes_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 40, 120, 40)
 
 def draw_menu():
     '''
-    Draws how the main menu looks ie. the play, select ai mode, and theme selector
+    Draws how the main menu looks ie. the play, AI mode, and theme selector
     '''
     screen.fill(WHITE)
 
@@ -43,7 +43,7 @@ def draw_menu():
     play_text = FONT.render("Play", True, WHITE)
     screen.blit(play_text, (play_button.centerx - play_text.get_width()//2, play_button.centery - play_text.get_height()//2))
 
-    # ai selector button
+    # ai selector button (visual only, no functionality)
     pygame.draw.rect(screen, DARK_GRAY, ai_selector_button)
     ai_selector_text = FONT.render("AI Mode", True, WHITE)
     screen.blit(ai_selector_text, (ai_selector_button.centerx - ai_selector_text.get_width()//2, ai_selector_button.centery - ai_selector_text.get_height()//2))
@@ -73,7 +73,7 @@ def run(state):
                 if play_button.collidepoint(event.pos):
                     state["GameState"] = "MineSelector"
                 elif ai_selector_button.collidepoint(event.pos):
-                    # to be implemented
+                    # AI Mode button - visual only, no functionality
                     pass
                 elif themes_button.collidepoint(event.pos):
                     state["GameState"] = "ThemeSelector"

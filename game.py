@@ -61,6 +61,8 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "won": False,
         "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
+        "ai_difficulty": "easy", # hard-coded AI difficulty
+        "current_turn": "human", # human goes first, then alternates with AI
     }
 
 def neighbors(state, r, c):
@@ -89,6 +91,11 @@ def reveal(state, r, c) -> Tuple[bool, str]:
         state["playing"] = False
         state["won"] = True
         return True, "You won!"
+    
+    # Switch turns if game is still playing
+    if state["playing"] and state["current_turn"] == "human":
+        state["current_turn"] = "ai"
+    
     return False, "Revealed."
 
 def flood_fill(state, r, c):
@@ -125,3 +132,38 @@ def check_win(state) -> bool:
     safe_cells = state["size"] * state["size"] - state["mine_count"]
     revealed = sum(1 for row in state["grid"] for c in row if c["revealed"] and not c["mine"])
     return revealed == safe_cells
+
+def ai_make_move(state) -> Tuple[bool, str]:
+    
+    if not state["playing"] or state["current_turn"] != "ai":
+        return False, "Not AI's turn or game finished."
+    
+    if state["ai_difficulty"] == "easy":
+        return ai_easy_move(state)
+    
+    return False, "Unknown AI difficulty."
+
+def ai_easy_move(state) -> Tuple[bool, str]:
+    
+    # Get all valid cells (not revealed, not flagged)
+    valid_cells = []
+    for r in range(state["size"]):
+        for c in range(state["size"]):
+            cell = state["grid"][r][c]
+            if not cell["revealed"] and not cell["flagged"]:
+                valid_cells.append((r, c))
+    
+    if not valid_cells:
+        return False, "No valid moves for AI."
+    
+    # Pick a random valid cell
+    r, c = random.choice(valid_cells)
+    
+    # Make the move
+    finished, message = reveal(state, r, c)
+    
+    # Switch turn back to human after AI move
+    if state["playing"]:  # Only switch if game is still ongoing
+        state["current_turn"] = "human"
+    
+    return finished, f"AI revealed ({r}, {c}): {message}"

@@ -1,6 +1,6 @@
 import sys
 import pygame
-from game import place_mines, create_game, reveal, toggle_flag
+from game import place_mines, create_game, reveal, toggle_flag, ai_make_move
 import mineSelector
 import mainMenu
 import themeSelector
@@ -46,7 +46,7 @@ def load_icon(path, size):
 def new_game(x=None, y=None):
     board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE,x,y)
     return create_game(board)
-def draw_menu(surface, state, flag_icon):
+def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
 
@@ -58,6 +58,20 @@ def draw_menu(surface, state, flag_icon):
     if not state["playing"]:
         status = "You Won!" if state["won"] else "Game Over"
         color = GREEN if state["won"] else RED
+    else:
+        if state['current_turn'] == 'ai' and ai_turn_timer > 0:
+            remaining = max(0, ai_turn_delay - (pygame.time.get_ticks() - ai_turn_timer))
+            countdown = remaining // 1000 + 1
+            status = f"AI thinking... {countdown}"
+            color = BLUE
+        else:
+            if state['current_turn'] == 'human':
+                status = "Your Turn"
+                color = WHITE
+            else:
+                status = f"{state['current_turn'].title()}'s Turn"
+                color = BLUE
+    
     surface.blit(font.render(status, True, color), (150, 8))
 
 def draw_grid(surface, grid_icon):
@@ -115,6 +129,10 @@ def main():
     state = new_game() # dummy state before the first square is clicked
     state["first_click"] = True
     show_tut = True
+    
+    # AI turn timing
+    ai_turn_timer = 0
+    ai_turn_delay = 2000  # 2 seconds delay before AI moves
 
     running = True
     while running:
@@ -130,9 +148,17 @@ def main():
             number_icons.append(number_icon)
 
         if state["GameState"] == "Play":
-            draw_menu(screen, state, flag_icon)
+            draw_menu(screen, state, flag_icon, ai_turn_timer, ai_turn_delay)
             draw_grid(screen, grid_icon)
             draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
+
+            # Handle AI turn with timer
+            if state["current_turn"] == "ai" and state["playing"]:
+                if ai_turn_timer == 0:
+                    ai_turn_timer = pygame.time.get_ticks()
+                elif pygame.time.get_ticks() - ai_turn_timer >= ai_turn_delay:
+                    ai_make_move(state)
+                    ai_turn_timer = 0  # Reset timer
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -144,12 +170,14 @@ def main():
                     state["theme"] = prev_theme
                     state["first_click"] = True
                     show_tut = True
+                    ai_turn_timer = 0  # Reset AI timer
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     prev_theme = state["theme"]
                     state = new_game()
                     state["theme"] = prev_theme
                     state["first_click"] = True
                     show_tut = True
+                    ai_turn_timer = 0  # Reset AI timer
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if show_tut:
                         show_tut = False                    
@@ -166,10 +194,13 @@ def main():
                                 state["theme"] = prev_theme
                                 state["first_click"] = False
                             else:
-                                if event.button == 1:
-                                    reveal(state, row, col)
-                                elif event.button == 3:
-                                    toggle_flag(state, row, col)
+                                # Only allow human input on human turn
+                                if state["current_turn"] == "human":
+                                    if event.button == 1:
+                                        reveal(state, row, col)
+                                        ai_turn_timer = 0  # Reset timer when human makes a move
+                                    elif event.button == 3:
+                                        toggle_flag(state, row, col)
 
             if show_tut:
                 draw_tutorial(screen)
