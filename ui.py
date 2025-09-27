@@ -59,15 +59,15 @@ def draw_menu(surface, state, flag_icon, bomb_icon):
         color = GREEN if state["won"] else RED
     surface.blit(font.render(status, True, color), (150, 8))
 
-def draw_grid(surface):
+def draw_grid(surface, grid_icon):
     for x in range(0, WINDOW_WIDTH, CELL_SIZE):
         for y in range(MENU_HEIGHT, WINDOW_HEIGHT, CELL_SIZE):
-            pygame.draw.rect(surface, WHITE, (x, y, CELL_SIZE, CELL_SIZE), 1)
+            surface.blit(grid_icon, (x + 3, y + 3))
 
-def draw_cells(surface, state, flag_icon, bomb_icon):
+def draw_cells(surface, state, flag_icon, bomb_icon, numbers, empty_icon):
     font = pygame.font.Font(None, 28)
     show_mines = not state["playing"] and not state["won"]
-
+    
     for r in range(state["size"]):
         for c in range(state["size"]):
             cell = state["grid"][r][c]
@@ -75,17 +75,14 @@ def draw_cells(surface, state, flag_icon, bomb_icon):
             rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
 
             if cell["revealed"]:
-                pygame.draw.rect(surface, DARKGREY, rect)
-                pygame.draw.rect(surface, GREY, rect, width=1)
+                surface.blit(empty_icon, (x + 3, y + 3))
                 if cell["mine"]:
                     surface.blit(bomb_icon, (x + 3, y + 3))
                 elif cell["srr"] > 0:
-                    color = BLUE if cell["srr"] == 1 else GREEN if cell["srr"] == 2 else RED
-                    txt = font.render(str(cell["srr"]), True, color)
-                    surface.blit(txt, (x + CELL_SIZE // 3, y + CELL_SIZE // 5))
+                    number = int(cell["srr"])
+                    surface.blit(numbers[number-1], (x + 3, y + 3))
             else:
-                pygame.draw.rect(surface, WHITE, rect)
-                pygame.draw.rect(surface, GREY, rect, width=1)
+                
                 if cell["flagged"]:
                     surface.blit(flag_icon, (x + 3, y + 3))
                 elif show_mines and cell["mine"]:
@@ -113,9 +110,15 @@ def main():
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Minesweeper")
     clock = pygame.time.Clock()
-
-    flag_icon = load_icon("flag.png", CELL_SIZE - 6)
-    bomb_icon = load_icon("bomb.png", CELL_SIZE - 6)
+    theme = "Themes/OG/"
+    flag_icon = load_icon(theme+"flag.png", CELL_SIZE - 6)
+    bomb_icon = load_icon(theme+"bomb.png", CELL_SIZE - 6)
+    grid_icon = load_icon(theme+"grid.png", CELL_SIZE - 6)
+    empty_icon = load_icon(theme+"empty.png", CELL_SIZE - 6)
+    number_icons = []
+    for i in range(1,9):
+        number_icon = load_icon(theme+"gridnum"+str(i)+".png", CELL_SIZE - 6)
+        number_icons.append(number_icon)
 
     state = new_game() # dummy state before the first square is clicked
     show_tut = True
@@ -125,8 +128,8 @@ def main():
         screen.fill(BLACK)
 
         draw_menu(screen, state, flag_icon, bomb_icon)
-        draw_grid(screen)
-        draw_cells(screen, state, flag_icon, bomb_icon)
+        draw_grid(screen, grid_icon)
+        draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
 
         if show_tut:
             draw_tutorial(screen)
@@ -136,6 +139,7 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 state = new_game()
+                state["first_click"] = True
                 show_tut = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if show_tut:
