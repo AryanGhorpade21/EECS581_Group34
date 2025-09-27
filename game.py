@@ -59,6 +59,8 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "flags_left": mine_count,
         "playing": True,
         "won": False,
+        "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
+        "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
     }
 
 def neighbors(state, r, c):
