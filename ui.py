@@ -138,6 +138,7 @@ def main():
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                 state = new_game()
+                state["first_click"] = True
                 show_tut = True
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if show_tut:
