@@ -142,6 +142,7 @@ def main():
                     state = new_game()
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
+                    state["first_click"] = True
                     show_tut = True
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     prev_theme = state["theme"]
