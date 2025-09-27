@@ -1,6 +1,9 @@
 import sys
 import pygame
 from game import place_mines, create_game, reveal, toggle_flag
+import mineSelector
+import mainMenu
+import themeSelector
 
 # Config
 GRID_SIZE = 10
@@ -25,7 +28,7 @@ TUTORIAL_TEXT = [
     "Left Click: Reveal",
     "Right Click: Flag / Unflag",
     "R: Restart",
-    "Esc: Quit",
+    "Esc: To Return to Main Menu",
     "",
     "Click or press any key to start"
 ]
@@ -43,7 +46,7 @@ def load_icon(path, size):
 def new_game(x=None, y=None):
     board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE,x,y)
     return create_game(board)
-def draw_menu(surface, state, flag_icon, bomb_icon):
+def draw_menu(surface, state, flag_icon):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
 
@@ -108,15 +111,6 @@ def main():
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption("Minesweeper")
     clock = pygame.time.Clock()
-    theme = "Themes/OG/"
-    flag_icon = load_icon(theme+"flag.png", CELL_SIZE - 6)
-    bomb_icon = load_icon(theme+"bomb.png", CELL_SIZE - 6)
-    grid_icon = load_icon(theme+"grid.png", CELL_SIZE - 6)
-    empty_icon = load_icon(theme+"empty.png", CELL_SIZE - 6)
-    number_icons = []
-    for i in range(1,9):
-        number_icon = load_icon(theme+"gridnum"+str(i)+".png", CELL_SIZE - 6)
-        number_icons.append(number_icon)
 
     state = new_game() # dummy state before the first square is clicked
     state["first_click"] = True
@@ -125,37 +119,67 @@ def main():
     running = True
     while running:
         screen.fill(BLACK)
+        flag_icon = load_icon(state["theme"]+"flag.png", CELL_SIZE - 6)
+        bomb_icon = load_icon(state["theme"]+"bomb.png", CELL_SIZE - 6)
+        grid_icon = load_icon(state["theme"]+"grid.png", CELL_SIZE - 6)
+        empty_icon = load_icon(state["theme"]+"empty.png", CELL_SIZE - 6)
+        number_icons = []
 
-        draw_menu(screen, state, flag_icon, bomb_icon)
-        draw_grid(screen, grid_icon)
-        draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
+        for i in range(1,9):
+            number_icon = load_icon(state["theme"]+"gridnum"+str(i)+".png", CELL_SIZE - 6)
+            number_icons.append(number_icon)
 
-        if show_tut:
-            draw_tutorial(screen)
+        if state["GameState"] == "Play":
+            draw_menu(screen, state, flag_icon)
+            draw_grid(screen, grid_icon)
+            draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
-                state = new_game()
-                state["first_click"] = True
-                show_tut = True
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if show_tut:
-                    show_tut = False                    
-                x, y = event.pos
-                if y > MENU_HEIGHT:
-                    row = (y - MENU_HEIGHT) // CELL_SIZE
-                    col = x // CELL_SIZE
-                    if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
-                        if state["first_click"]:
-                            state = new_game(x=row, y=col)
-                            state["first_click"] = False
-                        else:
-                            if event.button == 1:
-                                reveal(state, row, col)
-                            elif event.button == 3:
-                                toggle_flag(state, row, col)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                    prev_theme = state["theme"]
+                    state = new_game()
+                    state["GameState"] = "Play"
+                    state["theme"] = prev_theme
+                    state["first_click"] = True
+                    show_tut = True
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    prev_theme = state["theme"]
+                    state = new_game()
+                    state["theme"] = prev_theme
+                    state["first_click"] = True
+                    show_tut = True
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if show_tut:
+                        show_tut = False                    
+                    x, y = event.pos
+                    if y > MENU_HEIGHT:
+                        row = (y - MENU_HEIGHT) // CELL_SIZE
+                        col = x // CELL_SIZE
+                        if 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE:
+                            if state["first_click"]:
+                                prev_GameState = state["GameState"]
+                                prev_theme = state["theme"]
+                                state = new_game(x=row, y=col)
+                                state["GameState"] = prev_GameState
+                                state["theme"] = prev_theme
+                                state["first_click"] = False
+                            else:
+                                if event.button == 1:
+                                    reveal(state, row, col)
+                                elif event.button == 3:
+                                    toggle_flag(state, row, col)
+
+            if show_tut:
+                draw_tutorial(screen)
+        elif state["GameState"] == "MineSelector":
+            state = mineSelector.run(10, state)
+        elif state["GameState"] == "Menu":
+            state = mainMenu.run(state)
+        elif state["GameState"] == "ThemeSelector":
+            state = themeSelector.run(state)
+
         pygame.display.flip()
         clock.tick(60)
 
