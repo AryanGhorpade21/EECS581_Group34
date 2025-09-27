@@ -65,8 +65,12 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
             status = f"AI thinking... {countdown}"
             color = BLUE
         else:
-            status = f"{state['current_turn'].title()}'s Turn"
-            color = BLUE if state['current_turn'] == 'ai' else WHITE
+            if state['current_turn'] == 'human':
+                status = "Your Turn"
+                color = WHITE
+            else:
+                status = f"{state['current_turn'].title()}'s Turn"
+                color = BLUE
     
     surface.blit(font.render(status, True, color), (150, 8))
 
