@@ -61,7 +61,7 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "won": False,
         "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
-        "ai_difficulty": "easy", # hard-coded AI difficulty
+        "ai_difficulty": "hard", # AI difficulty - change to "easy" or "hard" as needed
         "current_turn": "human", # human goes first, then alternates with AI
     }
 
@@ -140,6 +140,8 @@ def ai_make_move(state) -> Tuple[bool, str]:
     
     if state["ai_difficulty"] == "easy":
         return ai_easy_move(state)
+    elif state["ai_difficulty"] == "hard":
+        return ai_hard_move(state)
     
     return False, "Unknown AI difficulty."
 
@@ -163,7 +165,42 @@ def ai_easy_move(state) -> Tuple[bool, str]:
     finished, message = reveal(state, r, c)
     
     # Switch turn back to human after AI move
-    if state["playing"]:  # Only switch if game is still ongoing
+    if state["playing"]: 
         state["current_turn"] = "human"
     
     return finished, f"AI revealed ({r}, {c}): {message}"
+
+def ai_hard_move(state) -> Tuple[bool, str]:
+    # Get all valid cells that are safe (not revealed, not flagged, and not mines)
+    safe_cells = []
+    for r in range(state["size"]):
+        for c in range(state["size"]):
+            cell = state["grid"][r][c]
+            if not cell["revealed"] and not cell["flagged"] and not cell["mine"]:
+                safe_cells.append((r, c))
+    
+    if not safe_cells:
+        # If no safe cells available, fall back to any valid cell 
+        valid_cells = []
+        for r in range(state["size"]):
+            for c in range(state["size"]):
+                cell = state["grid"][r][c]
+                if not cell["revealed"] and not cell["flagged"]:
+                    valid_cells.append((r, c))
+        
+        if not valid_cells:
+            return False, "No valid moves for AI."
+        
+        r, c = random.choice(valid_cells)
+    else:
+        # Pick a random safe cell (AI "cheats" by knowing which cells are safe)
+        r, c = random.choice(safe_cells)
+    
+    # Make the move
+    finished, message = reveal(state, r, c)
+    
+    # Switch turn back to human after AI move
+    if state["playing"]:  
+        state["current_turn"] = "human"
+    
+    return finished, f"AI (Hard) revealed safe cell ({r}, {c}): {message}"
