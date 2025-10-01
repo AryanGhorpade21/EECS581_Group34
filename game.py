@@ -61,7 +61,7 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "won": False,
         "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
-        "ai_difficulty": "hard", # AI difficulty - change to "easy" or "hard" as needed
+        "ai_difficulty": "medium", # AI difficulty - change to "easy" or "hard" as needed
         "current_turn": "human", # human goes first, then alternates with AI
     }
 
@@ -140,6 +140,8 @@ def ai_make_move(state) -> Tuple[bool, str]:
     
     if state["ai_difficulty"] == "easy":
         return ai_easy_move(state)
+    elif state["ai_difficulty"] == "medium":
+        return ai_medium_move(state)
     elif state["ai_difficulty"] == "hard":
         return ai_hard_move(state)
     
@@ -169,6 +171,123 @@ def ai_easy_move(state) -> Tuple[bool, str]:
         state["current_turn"] = "human"
     
     return finished, f"AI revealed ({r}, {c}): {message}"
+
+def ai_medium_move(state) -> Tuple[bool, str]:
+    
+    flags_placed = 0
+    max_flags_per_turn = 3
+    actions_taken = []
+    
+    # Rule 1: Flag hidden neighbors when count matches (up to 3 flags per turn)
+    while flags_placed < max_flags_per_turn:
+        flag_placed_this_iteration = False
+        
+        for r in range(state["size"]):
+            for c in range(state["size"]):
+                cell = state["grid"][r][c]
+                if cell["revealed"] and cell["srr"] > 0:
+                    # Get neighbors
+                    hidden_neighbors = []
+                    flagged_neighbors = []
+                    
+                    for nr, nc in neighbors(state, r, c):
+                        neighbor = state["grid"][nr][nc]
+                        if not neighbor["revealed"]:
+                            if neighbor["flagged"]:
+                                flagged_neighbors.append((nr, nc))
+                            else:
+                                hidden_neighbors.append((nr, nc))
+                    
+                    # If hidden neighbors count equals cell's number, flag all hidden neighbors
+                    if len(hidden_neighbors) == cell["srr"]:
+                        # Flag the first hidden neighbor
+                        fr, fc = hidden_neighbors[0]
+                        toggle_flag(state, fr, fc)
+                        flags_placed += 1
+                        actions_taken.append(f"flagged ({fr}, {fc})")
+                        flag_placed_this_iteration = True
+                        break
+            
+            if flag_placed_this_iteration:
+                break
+        
+        # If no flag was placed this iteration, break out of the flagging loop
+        if not flag_placed_this_iteration:
+            break
+    
+    # Rule 2: Open safe neighbors when flags match count
+    for r in range(state["size"]):
+        for c in range(state["size"]):
+            cell = state["grid"][r][c]
+            if cell["revealed"] and cell["srr"] > 0:
+                # Get neighbors
+                hidden_neighbors = []
+                flagged_neighbors = []
+                
+                for nr, nc in neighbors(state, r, c):
+                    neighbor = state["grid"][nr][nc]
+                    if not neighbor["revealed"]:
+                        if neighbor["flagged"]:
+                            flagged_neighbors.append((nr, nc))
+                        else:
+                            hidden_neighbors.append((nr, nc))
+                
+                # Rule 2: If flagged neighbors count equals cell number, open hidden neighbors
+                if len(flagged_neighbors) == cell["srr"] and len(hidden_neighbors) > 0:
+                    hr, hc = hidden_neighbors[0]
+                    finished, message = reveal(state, hr, hc)
+                    actions_taken.append(f"revealed ({hr}, {hc})")
+                    
+                    # Switch turn back to human after AI move
+                    if state["playing"]:
+                        state["current_turn"] = "human"
+                    
+                    action_summary = ", ".join(actions_taken)
+                    return finished, f"AI (Medium) {action_summary}: {message}"
+    
+    # If we placed flags but couldn't find a safe reveal, must pick a random cell
+    if flags_placed > 0:
+        valid_cells = []
+        for r in range(state["size"]):
+            for c in range(state["size"]):
+                cell = state["grid"][r][c]
+                if not cell["revealed"] and not cell["flagged"]:
+                    valid_cells.append((r, c))
+        
+        if valid_cells:
+            r, c = random.choice(valid_cells)
+            finished, message = reveal(state, r, c)
+            actions_taken.append(f"revealed random ({r}, {c})")
+            
+            # Switch turn back to human after AI move
+            if state["playing"]:
+                state["current_turn"] = "human"
+            
+            action_summary = ", ".join(actions_taken)
+            return finished, f"AI (Medium) {action_summary}: {message}"
+    
+    # Fallback: Pick a random hidden cell if no rules applied
+    valid_cells = []
+    for r in range(state["size"]):
+        for c in range(state["size"]):
+            cell = state["grid"][r][c]
+            if not cell["revealed"] and not cell["flagged"]:
+                valid_cells.append((r, c))
+    
+    if not valid_cells:
+        return False, "No valid moves for AI."
+    
+    # Pick a random valid cell
+    r, c = random.choice(valid_cells)
+    
+    # Make the move
+    finished, message = reveal(state, r, c)
+    
+    # Switch turn back to human after AI move
+    if state["playing"]:
+        state["current_turn"] = "human"
+    
+    return finished, f"AI (Medium) revealed random cell ({r}, {c}): {message}"
 
 def ai_hard_move(state) -> Tuple[bool, str]:
     # Get all valid cells that are safe (not revealed, not flagged, and not mines)
