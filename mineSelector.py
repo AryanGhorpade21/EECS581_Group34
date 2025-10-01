@@ -97,6 +97,7 @@ def run(mine_count, state):
                         mine_count += 1
                 elif start_button.collidepoint(event.pos):
                     state["GameState"] = "Play"
+                    state["NumMines"] = mine_count
                     return state
                 elif back_button.collidepoint(event.pos):
                     state["GameState"] = "Menu"
