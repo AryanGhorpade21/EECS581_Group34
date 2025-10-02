@@ -8,18 +8,21 @@ def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int]
     board = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
 
+ 
+    forbidden = set() # squresnot allowed to have bombs
+    if x is not None and y is not None:
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < rows and 0 <= ny < cols:
+                    forbidden.add((nx, ny))
+
     # Place mines
     while len(mine_positions) < num_mines:
         r, c = random.randrange(rows), random.randrange(cols)
-        if (r, c) not in mine_positions:
+        if (r, c) not in mine_positions and (r,c) not in forbidden:
             mine_positions.add((r, c))
             board[r][c] = MINE
-    # remove mines from spot user clicked and adjacent squares
-    print(x,y)
-    if x and y:
-        for offset_x in [-1, 0, 1]:
-            for offset_y in [-1, 0, 1]:
-                board[x + offset_x][y + offset_y] = None
 
     # Fill counts for non-mine cells
     for r in range(rows):
@@ -55,6 +58,7 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
     return {
         "size": size,
         "mine_count": mine_count,
+        "NumMines": 10,
         "grid": grid,
         "flags_left": mine_count,
         "playing": True,
