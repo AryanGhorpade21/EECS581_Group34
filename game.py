@@ -78,6 +78,7 @@ def neighbors(state, r, c):
 
 def reveal(state, r, c) -> Tuple[bool, str]:
     """Reveal a cell. Returns (finished, message)."""
+    state["ai_hit_bomb"] = False
     if not state["playing"]:
         return True, "Game finished."
     cell = state["grid"][r][c]
@@ -86,12 +87,20 @@ def reveal(state, r, c) -> Tuple[bool, str]:
     if cell["revealed"]:
         return False, "Already revealed."
     cell["revealed"] = True
+    
+    # Check for mine hit first (Game Over)
     if cell["mine"]:
         state["playing"] = False
+        if state["current_turn"] == "ai":
+            state["ai_hit_bomb"] = True
         return True, "Mine hit!"
+        
+    # Perform flood fill for safe empty cells
     if cell["srr"] == 0:
-        flood_fill(state, r, c)
-    if check_win(state):
+        flood_fill(state, r, c) # <--- Flood fill completes the move
+
+    # Now, check for a win after the cell (or multiple cells) has been revealed
+    if check_win(state): 
         state["playing"] = False
         state["won"] = True
         return True, "You won!"

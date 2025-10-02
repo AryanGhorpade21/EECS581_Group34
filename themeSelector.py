@@ -81,14 +81,16 @@ def run(state):
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if light_button.collidepoint(event.pos):
                     state["theme"] = "Themes/Light/"
+                    state["bkgd_music"] = "Themes/Light/Light.mp3"
                 elif dark_button.collidepoint(event.pos):
                     state["theme"] = "Themes/Dark/"
+                    state["bkgd_music"] = "Themes/Dark/Dark.mp3"
                 elif og_button.collidepoint(event.pos):
                     state["theme"] = "Themes/OG/"
+                    state["bkgd_music"] = "Themes/OG/OG.mp3"
                 elif drawn_button.collidepoint(event.pos):
                     state["theme"] = "Themes/Drawn/"
-                elif drawn_button.collidepoint(event.pos):
-                    state["theme"] = "Themes/Drawn/"
+                    state["bkgd_music"] = "Themes/Drawn/Drawn.mp3"
                 elif back_button.collidepoint(event.pos):
                     state["GameState"] = "Menu"
                 return state
