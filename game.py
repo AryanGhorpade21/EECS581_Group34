@@ -327,3 +327,41 @@ def ai_hard_move(state) -> Tuple[bool, str]:
         state["current_turn"] = "human"
     
     return finished, f"AI (Hard) revealed safe cell ({r}, {c}): {message}"
+    
+# Find a safe cell to reveal for the player
+def safe_space_hint(state) -> Optional[Tuple[int, int]]:
+    
+    if "hints_left" not in state: # Default hints
+        state["hints_left"] = 3  
+
+    if state["hints_left"] <= 0: # No hints left, return none
+        return None
+
+    # Find all safe cells (not revealed, flagged, or mined)
+    safe_cells = [
+        (r, c)
+        for r in range(state["size"])
+        for c in range(state["size"])
+        if not state["grid"][r][c]["revealed"]
+        and not state["grid"][r][c]["flagged"]
+        and not state["grid"][r][c]["mine"]
+    ]
+
+    if not safe_cells:
+        return None
+    
+    # Pick random safe cell to reveal, and decrement hints available
+    r, c = random.choice(safe_cells)
+    reveal(state, r, c)
+    state["hints_left"] -= 1
+    return (r, c)
+
+# Utilize the AI hard mode to solve the board
+def solver_mode(state) -> List[Tuple[int, int]]:
+    moves = []
+    while state["playing"]:
+        finished, message = ai_hard_move(state)
+        moves.append((finished, message))
+        if finished:
+            break
+    return moves
