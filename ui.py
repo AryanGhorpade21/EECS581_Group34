@@ -7,7 +7,7 @@ import themeSelector
 
 # Config
 GRID_SIZE = 10
-NUM_MINES = 20
+NUM_MINES = 10
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 440
 MENU_HEIGHT = 40
@@ -43,8 +43,8 @@ def load_icon(path, size):
         surf.fill((255, 0, 0))
         return surf
 
-def new_game(x=None, y=None):
-    board = place_mines(NUM_MINES, GRID_SIZE, GRID_SIZE,x,y)
+def new_game(x=None, y=None, num_mines=10):
+    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE,x,y)
     return create_game(board)
 def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
@@ -165,7 +165,7 @@ def main():
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     prev_theme = state["theme"]
-                    state = new_game()
+                    state = new_game(num_mines=NUM_MINES)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
                     state["first_click"] = True
@@ -173,14 +173,15 @@ def main():
                     ai_turn_timer = 0  # Reset AI timer
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     prev_theme = state["theme"]
-                    state = new_game()
+                    state = new_game(num_mines=NUM_MINES)
                     state["theme"] = prev_theme
                     state["first_click"] = True
                     show_tut = True
                     ai_turn_timer = 0  # Reset AI timer
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if show_tut:
-                        show_tut = False                    
+                        show_tut = False
+                        continue            
                     x, y = event.pos
                     if y > MENU_HEIGHT:
                         row = (y - MENU_HEIGHT) // CELL_SIZE
@@ -189,10 +190,14 @@ def main():
                             if state["first_click"]:
                                 prev_GameState = state["GameState"]
                                 prev_theme = state["theme"]
-                                state = new_game(x=row, y=col)
+                                #regenerate with proper mine count and garantee free space
+                                print(NUM_MINES)
+                                state = new_game(x=row, y=col, num_mines=NUM_MINES)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
                                 state["first_click"] = False
+                                # Immediately reveal the first clicked cell
+                                reveal(state, row, col)
                             else:
                                 # Only allow human input on human turn
                                 if state["current_turn"] == "human":
@@ -205,7 +210,8 @@ def main():
             if show_tut:
                 draw_tutorial(screen)
         elif state["GameState"] == "MineSelector":
-            state = mineSelector.run(10, state)
+            state = mineSelector.run(state["NumMines"], state)
+            NUM_MINES = state["NumMines"]
         elif state["GameState"] == "Menu":
             state = mainMenu.run(state)
         elif state["GameState"] == "ThemeSelector":
