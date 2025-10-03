@@ -65,8 +65,10 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "won": False,
         "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
-        "ai_difficulty": "medium", # AI difficulty - change to "easy" or "hard" as needed
-        "current_turn": "human", # human goes first, then alternates with AI
+        "ai_difficulty": "none", # AI difficulty - can be "none", "easy", "medium", or "hard"
+        "ai_enabled": False, # Whether AI is enabled or playing solo
+        "current_turn": "human", # human goes first, then alternates with AI (if enabled)
+        "music_muted": False, #control bg music on or off
     }
 
 def neighbors(state, r, c):
@@ -105,8 +107,8 @@ def reveal(state, r, c) -> Tuple[bool, str]:
         state["won"] = True
         return True, "You won!"
     
-    # Switch turns if game is still playing
-    if state["playing"] and state["current_turn"] == "human":
+    # Switch turns if game is still playing and AI is enabled
+    if state["playing"] and state.get("ai_enabled", True) and state["current_turn"] == "human":
         state["current_turn"] = "ai"
     
     return False, "Revealed."

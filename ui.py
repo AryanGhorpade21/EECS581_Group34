@@ -4,6 +4,7 @@ from game import place_mines, create_game, reveal, toggle_flag, ai_make_move
 import mineSelector
 import mainMenu
 import themeSelector
+import aiSelector
 
 # Config
 GRID_SIZE = 10
@@ -63,7 +64,6 @@ def new_game(x=None, y=None, num_mines=10):
     return create_game(board)
 
 def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
-    #UI for flag and flag counter
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
     font_timer = pygame.font.Font(None, 42)
@@ -91,20 +91,30 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
                 state["lose_played"] = True
 
     else:
-        if state['current_turn'] == 'ai' and ai_turn_timer > 0:
-            remaining = max(0, ai_turn_delay - (pygame.time.get_ticks() - ai_turn_timer))
-            countdown = remaining // 1000 + 1
-            status = f"AI thinking... {countdown}"
-            color = BLUE
+        # Check if AI is enabled
+        ai_enabled = state.get("ai_enabled", True)
+        
+        if not ai_enabled:
+            # Solo play mode
+            status = "Playing Solo"
+            color = WHITE
         else:
-            if state['current_turn'] == 'human':
-                status = "Your Turn"
-                color = WHITE
-            else:
-                status = f"{state['current_turn'].title()}'s Turn"
+            # AI vs Human mode
+            if state['current_turn'] == 'ai' and ai_turn_timer > 0:
+                remaining = max(0, ai_turn_delay - (pygame.time.get_ticks() - ai_turn_timer))
+                countdown = remaining // 1000 + 1
+                status = f"AI thinking... {countdown}"
                 color = BLUE
+            else:
+                if state['current_turn'] == 'human':
+                    status = "Your Turn"
+                    color = WHITE
+                else:
+                    status = f"{state['current_turn'].title()}'s Turn"
+                    color = BLUE
     
-    surface.blit(font.render(status, True, color), (260, 12))
+    surface.blit(font.render(status, True, color), (260, 8))
+
 
     # UI for Timer
     timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
@@ -117,14 +127,12 @@ def draw_grid(surface, grid_icon):
             surface.blit(grid_icon, (x + 3, y + 3))
 
 def draw_cells(surface, state, flag_icon, bomb_icon, numbers, empty_icon):
-    font = pygame.font.Font(None, 28)
     show_mines = not state["playing"] and not state["won"]
     
     for r in range(state["size"]):
         for c in range(state["size"]):
             cell = state["grid"][r][c]
             x, y = c * CELL_SIZE, r * CELL_SIZE + MENU_HEIGHT
-            rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
 
             if cell["revealed"]:
                 surface.blit(empty_icon, (x + 3, y + 3))
@@ -145,6 +153,19 @@ def load_bkgd_music(state):
     pygame.mixer.music.load(state["bkgd_music"])
     pygame.mixer.music.set_volume(0.1)
 
+def pause_music(state):
+    if state.get("music_muted", False):
+        pygame.mixer.music.play()
+        pygame.mixer.music.unpause()
+        state["music_muted"] = False
+    else:
+        pygame.mixer.music.pause()
+        state["music_muted"] = True
+
+    print("m pressed", state["music_muted"])
+
+    return state
+
 def draw_tutorial(surface, state):
     overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
     overlay.fill(GREY + (200,))
@@ -162,7 +183,6 @@ def draw_tutorial(surface, state):
         y += 40
     load_bkgd_music(state)
 
-
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -174,7 +194,6 @@ def main():
     show_tut = True
 
     state["timer_elapsed"] = "00:00:00"
-    state["first_click"] = True
     
     # AI turn timing
     ai_turn_timer = 0
@@ -209,8 +228,8 @@ def main():
             draw_grid(screen, grid_icon)
             draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
 
-            # Handle AI turn with timer
-            if state["current_turn"] == "ai" and state["playing"]:
+            # Handle AI turn with timer (only if AI is enabled)
+            if state.get("ai_enabled", True) and state["current_turn"] == "ai" and state["playing"]:
                 if ai_turn_timer == 0:
                     ai_turn_timer = pygame.time.get_ticks()
                 elif pygame.time.get_ticks() - ai_turn_timer >= ai_turn_delay:
@@ -221,26 +240,34 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
-                    if state.get("music_muted", False):
-                        pygame.mixer.music.unpause()
-                        state["music_muted"] = False
-                    else:
-                        pygame.mixer.music.pause()
-                        state["music_muted"] = True
+                    state = pause_music(state)
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     prev_theme = state["theme"]
                     prev_bkgd_music = state["bkgd_music"]
-                    state = new_game()
+                    prev_music_state = state["music_muted"]
+                    prev_ai_difficulty = state.get("ai_difficulty", "none")
+                    prev_ai_enabled = state.get("ai_enabled", False)
+                    state = new_game(num_mines=NUM_MINES)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
+                    state["ai_difficulty"] = prev_ai_difficulty
+                    state["ai_enabled"] = prev_ai_enabled
+                    state["current_turn"] = "human"
                     state["bkgd_music"] = prev_bkgd_music
                     state["first_click"] = True
                     show_tut = True
                     ai_turn_timer = 0  # Reset AI timer
+                    state["music_muted"] = prev_music_state
+                    pygame.mixer.music.play(-1)
+                    if state["music_muted"]:    
+                        pygame.mixer.music.pause()
+                        
+
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    prev_theme = state["theme"]
                     prev_bkgd_music = state["bkgd_music"]
-                    state = new_game()
+                    prev_theme = state["theme"]
+                    state = new_game(num_mines=NUM_MINES)
+                    state["GameState"] = "Menu"
                     state["theme"] = prev_theme
                     state["bkgd_music"] = prev_bkgd_music
                     state["first_click"] = True
@@ -254,6 +281,8 @@ def main():
                     if show_tut:
                         show_tut = False
                         pygame.mixer.music.play(-1)
+                        if state["music_muted"]:
+                            pygame.mixer.music.pause()
                         continue            
                     x, y = event.pos
                     if y > MENU_HEIGHT:
@@ -264,32 +293,52 @@ def main():
                                 prev_GameState = state["GameState"]
                                 prev_theme = state["theme"]
                                 prev_bkgd_music = state["bkgd_music"]
-                                #regenerate with proper mine count and garantee free space
-                                print(NUM_MINES)
+                                prev_music_state = state["music_muted"]
+                                prev_ai_enabled = state["ai_enabled"]
+                                prev_ai_difficulty = state["ai_difficulty"]
                                 state = new_game(x=row, y=col, num_mines=NUM_MINES)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
                                 state["bkgd_music"] = prev_bkgd_music
+                                state["ai_enabled"] = prev_ai_enabled
+                                state["ai_difficulty"] = prev_ai_difficulty
                                 state["first_click"] = False
                                 state["timer_start"] = pygame.time.get_ticks()
+                                state["music_muted"] = prev_music_state
                                 # Immediately reveal the first clicked cell
                                 if state["playing"]:
                                     tile_clicked.play()
                                 reveal(state, row, col)
                             else:
-                                # Only allow human input on human turn
-                                if state["current_turn"] == "human":
+                                # Check if AI is enabled
+                                ai_enabled = state.get("ai_enabled", True)
+                                
+                                if not ai_enabled:
+                                    # Solo mode - allow all moves
                                     if event.button == 1:
+                                        tile_clicked.play()
                                         reveal(state, row, col)
-                                        ai_turn_timer = 0  # Reset timer when human makes a move
-                                        if state["playing"]:
-                                            tile_clicked.play()
+                                        
                                     elif event.button == 3:
                                         toggle_flag(state, row, col)
-                                        if state["playing"]:
+                                        flag_placed.play()
+                                else:
+                                    # AI mode - only allow human input on human turn
+                                    if state["current_turn"] == "human":
+                                        if event.button == 1:
+                                            tile_clicked.play()
+                                            reveal(state, row, col)
+                                            
+                                            ai_turn_timer = 0  # Reset timer when human makes a move
+                                        elif event.button == 3:
                                             flag_placed.play()
+                                            toggle_flag(state, row, col)
+                                            
+
             if show_tut:
-                draw_tutorial(screen, state)
+                draw_tutorial(screen,state)
+        elif state["GameState"] == "AISelector":
+            state = aiSelector.run(state)
         elif state["GameState"] == "MineSelector":
             state = mineSelector.run(state["NumMines"], state)
             NUM_MINES = state["NumMines"]

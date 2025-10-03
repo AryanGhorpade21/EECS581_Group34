@@ -43,7 +43,7 @@ def draw_menu():
     play_text = FONT.render("Play", True, WHITE)
     screen.blit(play_text, (play_button.centerx - play_text.get_width()//2, play_button.centery - play_text.get_height()//2))
 
-    # ai selector button (visual only, no functionality)
+    # ai selector button
     pygame.draw.rect(screen, DARK_GRAY, ai_selector_button)
     ai_selector_text = FONT.render("AI Mode", True, WHITE)
     screen.blit(ai_selector_text, (ai_selector_button.centerx - ai_selector_text.get_width()//2, ai_selector_button.centery - ai_selector_text.get_height()//2))
@@ -71,10 +71,9 @@ def run(state):
                     sys.exit()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if play_button.collidepoint(event.pos):
-                    state["GameState"] = "MineSelector"
+                    state["GameState"] = "AISelector"
                 elif ai_selector_button.collidepoint(event.pos):
-                    # AI Mode button - visual only, no functionality
-                    pass
+                    state["GameState"] = "AISelector"
                 elif themes_button.collidepoint(event.pos):
                     state["GameState"] = "ThemeSelector"
                 
