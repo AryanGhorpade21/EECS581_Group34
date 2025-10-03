@@ -75,14 +75,14 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     status = ""
     color = WHITE
     if not state["playing"]:
-        if state["won"] or state["ai_hit_bomb"] == True:
+        if state["won"] or state["ai_hit_bomb"]:
             pygame.mixer.music.stop()
             status = "You Won!"
             color = GREEN
             if not state.get("win_played", False): #prevents looping of mp3
                 win_sound.play()
                 state["win_played"] = True
-        if state["ai_hit_bomb"] == False:
+        else:
             pygame.mixer.music.stop()
             status = "Game Over"
             color = RED
