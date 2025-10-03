@@ -69,7 +69,8 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     font_timer = pygame.font.Font(None, 42)
     font_flag = pygame.font.Font(None, 35)
     surface.blit(flag_icon, (10, 6))
-    surface.blit(font_flag.render(f"{state['flags_left']}", True, WHITE), (50, 10))
+    if not state["first_click"]:
+        surface.blit(font_flag.render(f"{state['flags_left']}", True, WHITE), (50, 10))
     
     #UI for Game state
     status = ""
