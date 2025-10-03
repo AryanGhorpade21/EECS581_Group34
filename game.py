@@ -3,7 +3,14 @@ from typing import List, Dict, Any, Tuple, Optional
 
 MINE = -1
 
-def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int] = None, y: Optional[int] = None) -> List[List[int]]:
+# Helper to skip tile if it's too close to an existing mine
+def too_close(r, c, mine_positions, spread):
+    for mr, mc in mine_positions:
+        if abs(r -mr) <= spread and abs(c - mc) <= spread:
+            return True
+    return False 
+
+def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int] = None, y: Optional[int] = None, spread: int = 0) -> List[List[int]]:
     """Create a new board with mines (-1) and neighbor counts (0–8)."""
     board = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
@@ -17,19 +24,30 @@ def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int]
                 if 0 <= nx < rows and 0 <= ny < cols:
                     forbidden.add((nx, ny))
 
-    # Place mines
-    while len(mine_positions) < num_mines:
+    # Place mines with repulsion logic 
+    attempts = 0
+    max_attempts = rows * cols * 10 # safeguard to avoid infinite loop
+    while len(mine_positions) < num_mines and attempts < max_attempts:
         r, c = random.randrange(rows), random.randrange(cols)
-        if (r, c) not in mine_positions and (r,c) not in forbidden:
-            mine_positions.add((r, c))
-            board[r][c] = MINE
+        attempts += 1
+
+        if (r, c) in mine_positions or (r, c) in forbidden:
+            continue
+        if too_close(r, c, mine_positions, spread):
+            continue
+
+        mine_positions.add((r, c))
+        board[r][c] = MINE
+
+    if len(mine_positions) < num_mines:
+        print(f"Warning: only placed {len(mine_positions)} mines (spread too high).")
 
     # Fill counts for non-mine cells
     for r in range(rows):
         for c in range(cols):
             if board[r][c] != MINE:
                 board[r][c] = surrounding_mines(board, r, c)
-
+    
     return board
 
 def surrounding_mines(board, row, col) -> int:
@@ -67,6 +85,7 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
         "ai_difficulty": "medium", # AI difficulty - change to "easy" or "hard" as needed
         "current_turn": "human", # human goes first, then alternates with AI
+        "density": 1 # tracks how spread out the mines are from each other - 0 = high density (clustered), 1 = spread out
     }
 
 def neighbors(state, r, c):

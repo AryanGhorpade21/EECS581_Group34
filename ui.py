@@ -58,9 +58,43 @@ def load_icon(path, size):
         surf.fill((255, 0, 0))
         return surf
 
-def new_game(x=None, y=None, num_mines=10):
-    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE,x,y)
-    return create_game(board)
+def new_game(x=None, y=None, state=None, dummy=False):
+    # use mine count from state if provided, otherwise fallback
+    num_mines = state.get("NumMines", 10) if state else 10
+    spread = state.get("density", 1) if state else 1
+
+    if dummy:
+        size = GRID_SIZE
+        grid = [
+            [
+                {"mine": False, "revealed": False, "flagged": False, "srr": 0}
+                for _ in range(size)
+            ]
+            for _ in range(size)
+        ]
+        return {
+            "size": size,
+            "mine_count": num_mines,
+            "flags_left": num_mines,
+            "grid": grid,
+            "playing": True,
+            "won": False,
+            "GameState": "Menu",  # will be set later
+            "theme": "Themes/OG/",
+            "bkgd_music": "Themes/OG/OG.mp3",
+            "ai_difficulty": "medium",
+            "current_turn": "human",
+            "density": spread,
+            "NumMines": num_mines,   # keep it in state
+        }
+
+    # Normal game board
+    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE, x, y, spread)
+    new_state = create_game(board)
+    new_state["density"] = spread
+    new_state["NumMines"] = num_mines
+    return new_state
+
 
 def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     #UI for flag and flag counter
@@ -169,7 +203,7 @@ def main():
     pygame.display.set_caption("Minesweeper")
     clock = pygame.time.Clock()
 
-    state = new_game() # dummy state before the first square is clicked
+    state = new_game(state={"density": 1, "NumMines": 10}, dummy=True) # dummy state before the first square is clicked
     state["first_click"] = True
     show_tut = True
 
@@ -230,7 +264,7 @@ def main():
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
                     prev_theme = state["theme"]
                     prev_bkgd_music = state["bkgd_music"]
-                    state = new_game()
+                    state = new_game(state=state)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
                     state["bkgd_music"] = prev_bkgd_music
@@ -266,7 +300,7 @@ def main():
                                 prev_bkgd_music = state["bkgd_music"]
                                 #regenerate with proper mine count and garantee free space
                                 print(NUM_MINES)
-                                state = new_game(x=row, y=col, num_mines=NUM_MINES)
+                                state = new_game(x=row, y=col, state=state)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
                                 state["bkgd_music"] = prev_bkgd_music
