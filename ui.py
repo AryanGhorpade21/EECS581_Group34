@@ -250,7 +250,6 @@ def main():
                     prev_music_state = state["music_muted"]
                     prev_ai_difficulty = state.get("ai_difficulty", "none")
                     prev_ai_enabled = state.get("ai_enabled", False)
-                    prev_density = state["density"]
                     state = new_game(num_mines=NUM_MINES, spread=SPREAD)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
@@ -259,7 +258,6 @@ def main():
                     state["current_turn"] = "human"
                     state["bkgd_music"] = prev_bkgd_music
                     state["first_click"] = True
-                    state["density"] = prev_density
                     show_tut = True
                     ai_turn_timer = 0  # Reset AI timer
                     state["music_muted"] = prev_music_state
@@ -301,7 +299,6 @@ def main():
                                 prev_music_state = state["music_muted"]
                                 prev_ai_enabled = state["ai_enabled"]
                                 prev_ai_difficulty = state["ai_difficulty"]
-                                prev_density = state["density"]
                                 state = new_game(x=row, y=col, num_mines=NUM_MINES, spread=SPREAD)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
@@ -311,7 +308,6 @@ def main():
                                 state["first_click"] = False
                                 state["timer_start"] = pygame.time.get_ticks()
                                 state["music_muted"] = prev_music_state
-                                state["density"] = prev_density
                                 # Immediately reveal the first clicked cell
                                 if state["playing"]:
                                     tile_clicked.play()
