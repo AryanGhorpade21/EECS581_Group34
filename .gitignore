@@ -1,2 +1,21 @@
-/__pycache__/*
-/.vscode/*
+# Ignore everything by default
+*
+
+# But keep .gitignore itself
+!.gitignore
+
+# Keep Python source files
+!*.py
+
+# Ignore common environment folders
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore system files
+.DS_Store
+Thumbs.db

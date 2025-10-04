@@ -25,7 +25,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Minesweeper - AI Selector")
 
 # AI options
-AI_OPTIONS = ["None", "Easy", "Medium", "Hard"]
+AI_OPTIONS = ["None", "Easy", "Medium", "Hard", "Solver"]
 
 # buttons
 back_button = pygame.Rect(WIDTH//2 - 60, HEIGHT - 60, 120, 40)
@@ -59,7 +59,8 @@ def draw_menu(ai_index):
         "None": "Play solo without AI",
         "Easy": "AI makes random moves",
         "Medium": "AI uses basic strategy",
-        "Hard": "AI knows safe moves"
+        "Hard": "AI knows safe moves",
+        "Solver": "AI will solve the whole board"
     }
     desc_text = SMALL_FONT.render(descriptions[ai_option], True, BLACK)
     screen.blit(desc_text, (WIDTH//2 - desc_text.get_width()//2, HEIGHT//2 + 20))

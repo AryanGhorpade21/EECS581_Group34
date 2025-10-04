@@ -9,6 +9,7 @@ import aiSelector
 # Config
 GRID_SIZE = 10
 NUM_MINES = 10
+SPREAD = 1
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 440
 MENU_HEIGHT = 40
@@ -62,9 +63,14 @@ def load_icon(path, size):
         surf.fill((255, 0, 0))
         return surf
 
-def new_game(x=None, y=None, num_mines=10):
-    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE,x,y)
-    return create_game(board)
+def new_game(x=None, y=None, num_mines=10, spread=SPREAD):
+    # Normal game board
+    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE, x, y, spread)
+    new_state = create_game(board)
+    new_state["NumMines"] = num_mines
+    new_state["density"] = spread
+    return new_state
+
 
 def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
@@ -73,7 +79,8 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
 
     #UI for Flag and flag number
     surface.blit(flag_icon, (10, 6))
-    surface.blit(font.render(f"{state['flags_left']}", True, WHITE), (45, 20))
+    if not state["first_click"]:
+        surface.blit(font.render(f"{state['flags_left']}", True, WHITE), (45, 20))
     
     #UI for Game state Text
     status = ""
@@ -120,9 +127,10 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     surface.blit(font.render(status, True, color), (260, 10))
 
     # UI for Timer
-    timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
-    timer_rect = timer_text.get_rect(left=85, centery=22)
-    surface.blit(timer_text, timer_rect)
+    if not state["ai_difficulty"] == "solver":
+        timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
+        timer_rect = timer_text.get_rect(left=85, centery=22)
+        surface.blit(timer_text, timer_rect)
 
     # UI for Hint
     hint_icon_bkgd = load_icon("Themes/OG/empty.png", CELL_SIZE - 6)
@@ -179,9 +187,6 @@ def pause_music(state):
     else:
         pygame.mixer.music.pause()
         state["music_muted"] = True
-
-    # print("m pressed", state["music_muted"])
-
     return state
 
 def draw_tutorial(surface, state):
@@ -252,6 +257,8 @@ def main():
                     ai_turn_timer = pygame.time.get_ticks()
                 elif pygame.time.get_ticks() - ai_turn_timer >= ai_turn_delay:
                     ai_make_move(state)
+                    if state["ai_difficulty"] == "solver":
+                        tile_clicked.play()
                     ai_turn_timer = 0  # Reset timer
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -270,7 +277,7 @@ def main():
                     prev_music_state = state["music_muted"]
                     prev_ai_difficulty = state.get("ai_difficulty", "none")
                     prev_ai_enabled = state.get("ai_enabled", False)
-                    state = new_game(num_mines=NUM_MINES)
+                    state = new_game(num_mines=NUM_MINES, spread=SPREAD)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
                     state["ai_difficulty"] = prev_ai_difficulty
@@ -287,7 +294,7 @@ def main():
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                     prev_bkgd_music = state["bkgd_music"]
                     prev_theme = state["theme"]
-                    state = new_game(num_mines=NUM_MINES)
+                    state = new_game(num_mines=NUM_MINES, spread=SPREAD)
                     state["GameState"] = "Menu"
                     state["theme"] = prev_theme
                     state["bkgd_music"] = prev_bkgd_music
@@ -324,7 +331,7 @@ def main():
                                 prev_music_state = state["music_muted"]
                                 prev_ai_enabled = state["ai_enabled"]
                                 prev_ai_difficulty = state["ai_difficulty"]
-                                state = new_game(x=row, y=col, num_mines=NUM_MINES)
+                                state = new_game(x=row, y=col, num_mines=NUM_MINES, spread=SPREAD)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
                                 state["bkgd_music"] = prev_bkgd_music
@@ -370,6 +377,7 @@ def main():
         elif state["GameState"] == "MineSelector":
             state = mineSelector.run(state["NumMines"], state)
             NUM_MINES = state["NumMines"]
+            SPREAD = state["density"]
         elif state["GameState"] == "Menu":
             state = mainMenu.run(state)
         elif state["GameState"] == "ThemeSelector":
