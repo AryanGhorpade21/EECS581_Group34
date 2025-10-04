@@ -1,4 +1,4 @@
-# Ignore everything
+# Ignore everything by default
 *
 
 # But keep .gitignore itself
@@ -7,6 +7,15 @@
 # Keep Python source files
 !*.py
 
-# Explicitly ignore cache and editor settings
-/__pycache__/
-/.vscode/
+# Ignore common environment folders
+env/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore system files
+.DS_Store
+Thumbs.db

@@ -1,13 +1,15 @@
 import sys
 import pygame
-from game import place_mines, create_game, reveal, toggle_flag, ai_make_move
+from game import place_mines, create_game, reveal, toggle_flag, ai_make_move, safe_space_hint
 import mineSelector
 import mainMenu
 import themeSelector
+import aiSelector
 
 # Config
 GRID_SIZE = 10
 NUM_MINES = 10
+SPREAD = 1
 WINDOW_WIDTH = 400
 WINDOW_HEIGHT = 440
 MENU_HEIGHT = 40
@@ -20,7 +22,8 @@ GREY = (50, 50, 50)
 DARKGREY = (100, 100, 100)
 RED = (255, 0, 0)
 GREEN = (0, 160, 0)
-BLUE = (0, 0, 255)
+LIGHT_BLUE = (173, 216, 230)
+YELLOW = (255, 255, 0)
 
 #Sound mixer file initialization
 lose_sound = pygame.mixer.Sound("sound_assets/lose.mp3")
@@ -44,6 +47,8 @@ TUTORIAL_TEXT = [
     "Right Click: Flag / Unflag",
     "R: Restart",
     "Esc: To Return to Main Menu",
+    "M: Mute Background Music",
+    "H: Find Guaranteed Safe Space"
     "",
     "Click or press any key to start"
 ]
@@ -58,58 +63,89 @@ def load_icon(path, size):
         surf.fill((255, 0, 0))
         return surf
 
-def new_game(x=None, y=None, num_mines=10):
-    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE,x,y)
-    return create_game(board)
+def new_game(x=None, y=None, num_mines=10, spread=SPREAD):
+    # Normal game board
+    board = place_mines(num_mines, GRID_SIZE, GRID_SIZE, x, y, spread)
+    new_state = create_game(board)
+    new_state["NumMines"] = num_mines
+    new_state["density"] = spread
+    return new_state
+
 
 def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
-    #UI for flag and flag counter
     pygame.draw.rect(surface, GREY, (0, 0, WINDOW_WIDTH, MENU_HEIGHT))
     font = pygame.font.Font(None, 28)
-    font_timer = pygame.font.Font(None, 42)
-    font_flag = pygame.font.Font(None, 35)
+    font_timer = pygame.font.Font(None, 35)
+
+    #UI for Flag and flag number
     surface.blit(flag_icon, (10, 6))
-    surface.blit(font_flag.render(f"{state['flags_left']}", True, WHITE), (50, 10))
+    if not state["first_click"]:
+        surface.blit(font.render(f"{state['flags_left']}", True, WHITE), (45, 20))
     
-    #UI for Game state
+    #UI for Game state Text
     status = ""
     color = WHITE
     if not state["playing"]:
-        if state["won"] or state["ai_hit_bomb"] == True:
+        if state["won"] or state["ai_hit_bomb"]:
             pygame.mixer.music.stop()
             status = "You Won!"
             color = GREEN
-            if not state.get("win_played", False): #prevents looping of mp3
+            if not state.get("win_played", False) and state.get("ai_enabled", True): #prevents looping of mp3
                 win_sound.play()
                 state["win_played"] = True
-        if state["ai_hit_bomb"] == False:
+        else:
             pygame.mixer.music.stop()
             status = "Game Over"
             color = RED
-            if not state.get("lose_played", False): #prevents looping of mp3
+            if not state.get("lose_played", False) and state.get("ai_enabled", True): #prevents looping of mp3
                 lose_sound.play()
                 state["lose_played"] = True
 
     else:
-        if state['current_turn'] == 'ai' and ai_turn_timer > 0:
-            remaining = max(0, ai_turn_delay - (pygame.time.get_ticks() - ai_turn_timer))
-            countdown = remaining // 1000 + 1
-            status = f"AI thinking... {countdown}"
-            color = BLUE
+        # Check if AI is enabled
+        ai_enabled = state.get("ai_enabled", True)
+        
+        if not ai_enabled:
+            # Solo play mode
+            status = "Playing Solo"
+            color = WHITE
         else:
-            if state['current_turn'] == 'human':
-                status = "Your Turn"
-                color = WHITE
+            # AI vs Human mode
+            if state['current_turn'] == 'ai' and ai_turn_timer > 0:
+                remaining = max(0, ai_turn_delay - (pygame.time.get_ticks() - ai_turn_timer))
+                countdown = remaining // 1000 + 1
+                status = f"AI thinking... {countdown}"
+                color = LIGHT_BLUE
             else:
-                status = f"{state['current_turn'].title()}'s Turn"
-                color = BLUE
+                if state['current_turn'] == 'human':
+                    status = "Your Turn"
+                    color = WHITE
+                else:
+                    status = f"{state['current_turn'].title()}'s Turn"
+                    color = LIGHT_BLUE
     
-    surface.blit(font.render(status, True, color), (260, 12))
+    surface.blit(font.render(status, True, color), (260, 10))
 
     # UI for Timer
-    timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
-    timer_rect = timer_text.get_rect(left=100, centery=22)
-    surface.blit(timer_text, timer_rect)
+    if not state["ai_difficulty"] == "solver":
+        timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
+        timer_rect = timer_text.get_rect(left=85, centery=22)
+        surface.blit(timer_text, timer_rect)
+
+    # UI for Hint
+    hint_icon_bkgd = load_icon("Themes/OG/empty.png", CELL_SIZE - 6)
+    hint_icon = load_icon("button_assets/hinter.png", CELL_SIZE - 6)
+    hints_remaining = state.get("hints_left", 3)
+
+    # Position for hinter
+    hint_x, hint_y = WINDOW_WIDTH // 2, 6
+    surface.blit(hint_icon_bkgd, (hint_x, hint_y))
+    surface.blit(hint_icon, (hint_x, hint_y))
+    surface.blit(font.render(f"{hints_remaining}", True, YELLOW), (hint_x + 38, 20))
+
+    # Store clickable rect in state
+    state["hint_rect"] = pygame.Rect(hint_x, hint_y, CELL_SIZE - 6, CELL_SIZE - 6)
+
 
 def draw_grid(surface, grid_icon):
     for x in range(0, WINDOW_WIDTH, CELL_SIZE):
@@ -117,14 +153,12 @@ def draw_grid(surface, grid_icon):
             surface.blit(grid_icon, (x + 3, y + 3))
 
 def draw_cells(surface, state, flag_icon, bomb_icon, numbers, empty_icon):
-    font = pygame.font.Font(None, 28)
     show_mines = not state["playing"] and not state["won"]
     
     for r in range(state["size"]):
         for c in range(state["size"]):
             cell = state["grid"][r][c]
             x, y = c * CELL_SIZE, r * CELL_SIZE + MENU_HEIGHT
-            rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
 
             if cell["revealed"]:
                 surface.blit(empty_icon, (x + 3, y + 3))
@@ -145,6 +179,16 @@ def load_bkgd_music(state):
     pygame.mixer.music.load(state["bkgd_music"])
     pygame.mixer.music.set_volume(0.1)
 
+def pause_music(state):
+    if state.get("music_muted", False):
+        pygame.mixer.music.play()
+        pygame.mixer.music.unpause()
+        state["music_muted"] = False
+    else:
+        pygame.mixer.music.pause()
+        state["music_muted"] = True
+    return state
+
 def draw_tutorial(surface, state):
     overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
     overlay.fill(GREY + (200,))
@@ -162,7 +206,6 @@ def draw_tutorial(surface, state):
         y += 40
     load_bkgd_music(state)
 
-
 def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -174,7 +217,6 @@ def main():
     show_tut = True
 
     state["timer_elapsed"] = "00:00:00"
-    state["first_click"] = True
     
     # AI turn timing
     ai_turn_timer = 0
@@ -186,7 +228,7 @@ def main():
 
     running = True
     while running:
-        screen.fill(BLACK)
+        screen.fill(GREY)
         flag_icon = load_icon(state["theme"]+"flag.png", CELL_SIZE - 6)
         bomb_icon = load_icon(state["theme"]+"bomb.png", CELL_SIZE - 6)
         grid_icon = load_icon(state["theme"]+"grid.png", CELL_SIZE - 6)
@@ -209,38 +251,51 @@ def main():
             draw_grid(screen, grid_icon)
             draw_cells(screen, state, flag_icon, bomb_icon, number_icons, empty_icon)
 
-            # Handle AI turn with timer
-            if state["current_turn"] == "ai" and state["playing"]:
+            # Handle AI turn with timer (only if AI is enabled)
+            if state.get("ai_enabled", True) and state["current_turn"] == "ai" and state["playing"]:
                 if ai_turn_timer == 0:
                     ai_turn_timer = pygame.time.get_ticks()
                 elif pygame.time.get_ticks() - ai_turn_timer >= ai_turn_delay:
                     ai_make_move(state)
+                    if state["ai_difficulty"] == "solver":
+                        tile_clicked.play()
                     ai_turn_timer = 0  # Reset timer
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_m:
-                    if state.get("music_muted", False):
-                        pygame.mixer.music.unpause()
-                        state["music_muted"] = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_h and state["current_turn"] == "human":  # Press H for hint
+                    result = safe_space_hint(state)
+                    if result:
+                        print("Hint revealed at", result)
                     else:
-                        pygame.mixer.music.pause()
-                        state["music_muted"] = True
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r:
+                        print("No hints left or no safe cells available.")
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_m: #Press M for Mute
+                    state = pause_music(state)
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_r: #Press R for Reset
                     prev_theme = state["theme"]
                     prev_bkgd_music = state["bkgd_music"]
-                    state = new_game()
+                    prev_music_state = state["music_muted"]
+                    prev_ai_difficulty = state.get("ai_difficulty", "none")
+                    prev_ai_enabled = state.get("ai_enabled", False)
+                    state = new_game(num_mines=NUM_MINES, spread=SPREAD)
                     state["GameState"] = "Play"
                     state["theme"] = prev_theme
+                    state["ai_difficulty"] = prev_ai_difficulty
+                    state["ai_enabled"] = prev_ai_enabled
+                    state["current_turn"] = "human"
                     state["bkgd_music"] = prev_bkgd_music
                     state["first_click"] = True
                     show_tut = True
                     ai_turn_timer = 0  # Reset AI timer
+                    state["music_muted"] = prev_music_state
+                    pygame.mixer.music.play(-1)
+                    if state["music_muted"]:    
+                        pygame.mixer.music.pause()
                 elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    prev_theme = state["theme"]
                     prev_bkgd_music = state["bkgd_music"]
-                    state = new_game()
+                    prev_theme = state["theme"]
+                    state = new_game(num_mines=NUM_MINES, spread=SPREAD)
+                    state["GameState"] = "Menu"
                     state["theme"] = prev_theme
                     state["bkgd_music"] = prev_bkgd_music
                     state["first_click"] = True
@@ -254,8 +309,17 @@ def main():
                     if show_tut:
                         show_tut = False
                         pygame.mixer.music.play(-1)
+                        if state["music_muted"]:
+                            pygame.mixer.music.pause()
                         continue            
                     x, y = event.pos
+                    if "hint_rect" in state and state["hint_rect"].collidepoint(x, y) and state["current_turn"] == "human":
+                        result = safe_space_hint(state)
+                        if result:
+                            print("Hint revealed at", result)
+                        else:
+                            print("No hints left or no safe cells available.")
+                        continue  # avoid processing click as board cell
                     if y > MENU_HEIGHT:
                         row = (y - MENU_HEIGHT) // CELL_SIZE
                         col = x // CELL_SIZE
@@ -264,35 +328,56 @@ def main():
                                 prev_GameState = state["GameState"]
                                 prev_theme = state["theme"]
                                 prev_bkgd_music = state["bkgd_music"]
-                                #regenerate with proper mine count and garantee free space
-                                print(NUM_MINES)
-                                state = new_game(x=row, y=col, num_mines=NUM_MINES)
+                                prev_music_state = state["music_muted"]
+                                prev_ai_enabled = state["ai_enabled"]
+                                prev_ai_difficulty = state["ai_difficulty"]
+                                state = new_game(x=row, y=col, num_mines=NUM_MINES, spread=SPREAD)
                                 state["GameState"] = prev_GameState
                                 state["theme"] = prev_theme
                                 state["bkgd_music"] = prev_bkgd_music
+                                state["ai_enabled"] = prev_ai_enabled
+                                state["ai_difficulty"] = prev_ai_difficulty
                                 state["first_click"] = False
                                 state["timer_start"] = pygame.time.get_ticks()
+                                state["music_muted"] = prev_music_state
                                 # Immediately reveal the first clicked cell
                                 if state["playing"]:
                                     tile_clicked.play()
                                 reveal(state, row, col)
                             else:
-                                # Only allow human input on human turn
-                                if state["current_turn"] == "human":
+                                # Check if AI is enabled
+                                ai_enabled = state.get("ai_enabled", True)
+                                
+                                if not ai_enabled:
+                                    # Solo mode - allow all moves
                                     if event.button == 1:
+                                        tile_clicked.play()
                                         reveal(state, row, col)
-                                        ai_turn_timer = 0  # Reset timer when human makes a move
-                                        if state["playing"]:
-                                            tile_clicked.play()
+                                        
                                     elif event.button == 3:
+                                        flag_placed.play()
                                         toggle_flag(state, row, col)
-                                        if state["playing"]:
+                                else:
+                                    # AI mode - only allow human input on human turn
+                                    if state["current_turn"] == "human":
+                                        if event.button == 1:
+                                            tile_clicked.play()
+                                            reveal(state, row, col)
+                                            
+                                            ai_turn_timer = 0  # Reset timer when human makes a move
+                                        elif event.button == 3:
                                             flag_placed.play()
+                                            toggle_flag(state, row, col)
+                                            
+
             if show_tut:
-                draw_tutorial(screen, state)
+                draw_tutorial(screen,state)
+        elif state["GameState"] == "AISelector":
+            state = aiSelector.run(state)
         elif state["GameState"] == "MineSelector":
             state = mineSelector.run(state["NumMines"], state)
             NUM_MINES = state["NumMines"]
+            SPREAD = state["density"]
         elif state["GameState"] == "Menu":
             state = mainMenu.run(state)
         elif state["GameState"] == "ThemeSelector":
