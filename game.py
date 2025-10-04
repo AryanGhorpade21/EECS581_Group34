@@ -178,6 +178,8 @@ def ai_make_move(state) -> Tuple[bool, str]:
         return ai_medium_move(state)
     elif state["ai_difficulty"] == "hard":
         return ai_hard_move(state)
+    elif state["ai_difficulty"] == "solver":
+        return solver_mode(state)
     
     return False, "Unknown AI difficulty."
 
@@ -353,7 +355,7 @@ def ai_hard_move(state) -> Tuple[bool, str]:
     finished, message = reveal(state, r, c)
     
     # Switch turn back to human after AI move
-    if state["playing"]:  
+    if state["playing"] and state["ai_difficulty"] != "solver":  
         state["current_turn"] = "human"
     
     return finished, f"AI (Hard) revealed safe cell ({r}, {c}): {message}"
@@ -388,10 +390,5 @@ def safe_space_hint(state) -> Optional[Tuple[int, int]]:
 
 # Utilize the AI hard mode to solve the board
 def solver_mode(state) -> List[Tuple[int, int]]:
-    moves = []
-    while state["playing"]:
-        finished, message = ai_hard_move(state)
-        moves.append((finished, message))
-        if finished:
-            break
-    return moves
+    finished, message = ai_hard_move(state)
+    return (finished, message)

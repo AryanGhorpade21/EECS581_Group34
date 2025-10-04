@@ -75,7 +75,8 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
     font_timer = pygame.font.Font(None, 42)
     font_flag = pygame.font.Font(None, 35)
     surface.blit(flag_icon, (10, 6))
-    surface.blit(font_flag.render(f"{state['flags_left']}", True, WHITE), (50, 10))
+    if not state["first_click"]:
+        surface.blit(font_flag.render(f"{state['flags_left']}", True, WHITE), (50, 10))
     
     #UI for Game state
     status = ""
@@ -123,9 +124,10 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
 
 
     # UI for Timer
-    timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
-    timer_rect = timer_text.get_rect(left=100, centery=22)
-    surface.blit(timer_text, timer_rect)
+    if not state["ai_difficulty"] == "solver":
+        timer_text = font_timer.render(f"{state.get('timer_elapsed', '00:00:00')}", True, WHITE)
+        timer_rect = timer_text.get_rect(left=100, centery=22)
+        surface.blit(timer_text, timer_rect)
 
 def draw_grid(surface, grid_icon):
     for x in range(0, WINDOW_WIDTH, CELL_SIZE):
@@ -237,6 +239,8 @@ def main():
                     ai_turn_timer = pygame.time.get_ticks()
                 elif pygame.time.get_ticks() - ai_turn_timer >= ai_turn_delay:
                     ai_make_move(state)
+                    if state["ai_difficulty"] == "solver":
+                        tile_clicked.play()
                     ai_turn_timer = 0  # Reset timer
 
             for event in pygame.event.get():
