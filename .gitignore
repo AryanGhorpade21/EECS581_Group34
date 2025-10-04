@@ -1,2 +1,12 @@
-/__pycache__/*
-/.vscode/*
+# Ignore everything
+*
+
+# But keep .gitignore itself
+!.gitignore
+
+# Keep Python source files
+!*.py
+
+# Explicitly ignore cache and editor settings
+/__pycache__/
+/.vscode/
