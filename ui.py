@@ -5,6 +5,7 @@ import mineSelector
 import mainMenu
 import themeSelector
 import aiSelector
+from highscores import save_highscore 
 
 # Config
 GRID_SIZE = 10
@@ -69,6 +70,7 @@ def new_game(x=None, y=None, num_mines=10, spread=SPREAD):
     new_state = create_game(board)
     new_state["NumMines"] = num_mines
     new_state["density"] = spread
+    new_state["highscore_saved"] = False 
     return new_state
 
 
@@ -93,6 +95,13 @@ def draw_menu(surface, state, flag_icon, ai_turn_timer=0, ai_turn_delay=2000):
             if not state.get("win_played", False) and state.get("ai_enabled", True): #prevents looping of mp3
                 win_sound.play()
                 state["win_played"] = True
+            # Check for win and record highscore once
+            if not state.get("highscore_saved", False):
+                h, m, s = map(int, state["timer_elapsed"].split(":"))
+                total_seconds = h * 3600 + m * 60 + s 
+                save_highscore(total_seconds)
+                state["highscore_saved"] = True # prevents duplicates 
+
         else:
             pygame.mixer.music.stop()
             status = "Game Over"
