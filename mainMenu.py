@@ -1,12 +1,12 @@
-from networkx import is_empty
-from numpy import empty
 import pygame
 import sys
 from highscores import format_scores
 
 '''
-Initilizes main menu screen size and button/text positioning
+Module: mainMenu
+Description: initializes main menu screen size and provides navigation to Play, AI Mode, Themes, and Scores
 '''
+
 pygame.init()
 
 # colors
@@ -31,7 +31,7 @@ ai_selector_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 - 10, 120, 40)
 themes_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 40, 120, 40)
 scores_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 90, 120, 40)
 
-# Function to render the top 5 highest scores list 
+# function to render the top 5 highest scores list
 def draw_highscores(screen, state=None):
     screen.fill(WHITE)
     title = FONT.render("Top 5 Times", True, BLACK)
@@ -41,12 +41,12 @@ def draw_highscores(screen, state=None):
     print(scores)
 
     if not scores:
-        # Display message when there are no recorded scores
+        # display message when there are no recorded scores
         no_scores_text = FONT.render("No scores recorded yet!", True, DARK_GRAY)
         no_scores_rect = no_scores_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         screen.blit(no_scores_text, no_scores_rect)
     else:
-        # Display formatted score list
+        # display formatted score list
         for i, line in enumerate(scores):
             txt = FONT.render(line, True, BLACK)
             txt_rect = txt.get_rect(centerx=WIDTH // 2, y=120 + i * 40)
@@ -60,7 +60,7 @@ def draw_highscores(screen, state=None):
 
     pygame.display.flip()
 
-    # Wait for user to exit using back button
+    # wait for user to exit using back button
     clock = pygame.time.Clock()
     waiting = True
     while waiting:
@@ -80,9 +80,7 @@ def draw_highscores(screen, state=None):
         clock.tick(30)
 
 def draw_menu():
-    '''
-    Draws how the main menu looks ie. the play, AI mode, and theme selector
-    '''
+    # draws how the main menu looks ie. the play, AI mode, and theme selector
     screen.fill(WHITE)
 
     # title
@@ -116,10 +114,7 @@ def draw_menu():
 
 
 def run(state): 
-    '''
-    Executes drawing the menu and handles user input
-    of starting game, selecting ai mode, selecting theme
-    '''
+    # executes drawing the menu and handles user input of starting game, selecting ai mode, selecting theme
     clock = pygame.time.Clock()
     while True:
         draw_menu()

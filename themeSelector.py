@@ -1,9 +1,11 @@
-
 import pygame
 import sys
+
 '''
-Initilizes theme selector screen size and button/text positioning
+Module: themeSelector
+Description: UI for selecting a visual theme and associated background music
 '''
+
 pygame.init()
 
 # colors
@@ -30,9 +32,7 @@ drawn_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 90 , 120, 40)
 back_button = pygame.Rect(WIDTH//2 - 60, HEIGHT//2 + 140 , 120, 40)
 
 def draw_menu(state):
-    '''
-    Draws how the theme selector look ie. dark, og, light, drawn
-    '''
+    # draws how the theme selector look ie. dark, og, light, drawn
     screen.fill(WHITE)
 
     # title
@@ -66,10 +66,7 @@ def draw_menu(state):
 
 
 def run(state): 
-    '''
-    Executes drawing handles user input
-    of selecting light dark og drawn themes
-    '''
+    # executes drawing handles user input of selecting light dark og drawn themes
     clock = pygame.time.Clock()
     while True:
         draw_menu(state)

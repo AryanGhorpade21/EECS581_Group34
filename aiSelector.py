@@ -2,8 +2,11 @@ import pygame
 import sys
 
 '''
-Initializes AI selector page screen size and button/text positioning
+Module: aiSelector
+Description: initializes AI selector page screen size and button/text positioning
+Atharva Patil, 9/30/2025
 '''
+
 pygame.init()
 
 # colors
@@ -34,9 +37,7 @@ left_button = pygame.Rect(WIDTH//2 - 120, HEIGHT//2 - 20, 40, 40)
 right_button = pygame.Rect(WIDTH//2 + 80, HEIGHT//2 - 20, 40, 40)
 
 def draw_menu(ai_index):
-    '''
-    Draws how the AI selector looks with left/right buttons and tracking AI selection
-    '''
+    # draws how the AI selector looks with left/right buttons and tracking AI selection
     screen.fill(WHITE)
 
     # title
@@ -54,7 +55,7 @@ def draw_menu(ai_index):
     option_text = FONT.render(ai_option, True, color)
     screen.blit(option_text, (WIDTH//2 - option_text.get_width()//2, HEIGHT//2 - 10))
 
-    # Description text
+    # description text
     descriptions = {
         "None": "Play solo without AI",
         "Easy": "AI makes random moves",
@@ -89,12 +90,11 @@ def draw_menu(ai_index):
 
 
 def run(state): 
-    '''
-    Executes drawing the menu and handles user input of selecting AI difficulty and continuing to mine selector
-    '''
-    # Get current AI difficulty index from state
+    # executes drawing the menu and handles user input of selecting AI difficulty and continuing to mine selector
+    
+    # get current AI difficulty index from state
     current_ai = state.get("ai_difficulty", "none").lower()
-    ai_index = 0  # Default to "None"
+    ai_index = 0  # default to "None"
     
     for i, option in enumerate(AI_OPTIONS):
         if option.lower() == current_ai:
@@ -115,19 +115,19 @@ def run(state):
                 elif right_button.collidepoint(event.pos):
                     ai_index = (ai_index + 1) % len(AI_OPTIONS)
                 elif start_button.collidepoint(event.pos):
-                    # Set AI difficulty in state
+                    # set AI difficulty in state
                     selected_ai = AI_OPTIONS[ai_index].lower()
                     state["ai_difficulty"] = selected_ai
-                    
-                    # Set game mode based on AI selection
+
+                    # set game mode based on AI selection
                     if selected_ai == "none":
-                        state["current_turn"] = "human"  # Human only mode
+                        state["current_turn"] = "human"  # human only mode
                         state["ai_enabled"] = False
                     else:
-                        state["current_turn"] = "human"  # Human starts first
+                        state["current_turn"] = "human"  # human starts first
                         state["ai_enabled"] = True
                     
-                    # Continue to mine selector
+                    # continue to mine selector
                     state["GameState"] = "MineSelector"
                     return state
                 elif back_button.collidepoint(event.pos):
