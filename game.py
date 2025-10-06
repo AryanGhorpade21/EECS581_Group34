@@ -1,9 +1,15 @@
 import random
 from typing import List, Dict, Any, Tuple, Optional
 
+'''
+Module: game
+Description: Handles core Minesweeper game logic such as board generation, mine placement (with optional spread/repulsion), 
+neighbor counting, reveal/flag mechanics, flood-fill for zero-cells, win/loss checks, and AI move helpers.
+'''
+
 MINE = -1
 
-# Helper to skip tile if it's too close to an existing mine
+# helper to skip tile if it's too close to an existing mine
 def too_close(r, c, mine_positions, spread):
     for mr, mc in mine_positions:
         if abs(r -mr) <= spread and abs(c - mc) <= spread:
@@ -11,12 +17,11 @@ def too_close(r, c, mine_positions, spread):
     return False 
 
 def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int] = None, y: Optional[int] = None, spread: int = 0) -> List[List[int]]:
-    """Create a new board with mines (-1) and neighbor counts (0–8)."""
+    # create a new board with mines (-1) and neighbor counts (0–8).
     board = [[0 for _ in range(cols)] for _ in range(rows)]
     mine_positions = set()
 
- 
-    forbidden = set() # squresnot allowed to have bombs
+    forbidden = set() # squares not allowed to have bombs
     if x is not None and y is not None:
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
@@ -24,7 +29,7 @@ def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int]
                 if 0 <= nx < rows and 0 <= ny < cols:
                     forbidden.add((nx, ny))
 
-    # Place mines with repulsion logic 
+    # place mines with repulsion logic 
     attempts = 0
     max_attempts = rows * cols * 10 # safeguard to avoid infinite loop
     while len(mine_positions) < num_mines and attempts < max_attempts:
@@ -42,7 +47,7 @@ def place_mines(num_mines: int, rows: int = 10, cols: int = 10, x: Optional[int]
     if len(mine_positions) < num_mines:
         print(f"Warning: only placed {len(mine_positions)} mines (spread too high).")
 
-    # Fill counts for non-mine cells
+    # fill counts for non-mine cells
     for r in range(rows):
         for c in range(cols):
             if board[r][c] != MINE:
@@ -60,7 +65,7 @@ def surrounding_mines(board, row, col) -> int:
     return count
 
 def create_game(board: List[List[int]]) -> Dict[str, Any]:
-    """Wrap a board into a game state dict."""
+    # wrap a board into a game state dict
     size = len(board)
     mine_count = sum(cell == MINE for row in board for cell in row)
     grid = [
@@ -84,9 +89,9 @@ def create_game(board: List[List[int]]) -> Dict[str, Any]:
         "GameState": "Menu", # can be Menu, ThemeSelector, MineSelector, Single, AiEasy, AiMedium, AiHard
         "theme": "Themes/OG/", # can be Themes/Drawn/, Themes/OG/, Themes/Dark/, Themes/Light/
         "ai_difficulty": "none", # AI difficulty - can be "none", "easy", "medium", or "hard"
-        "ai_enabled": False, # Whether AI is enabled or playing solo
+        "ai_enabled": False, # whether AI is enabled or playing solo
         "current_turn": "human", # human goes first, then alternates with AI (if enabled)
-        "music_muted": False, #control bg music on or off
+        "music_muted": False, # control bg music on or off
         "density": 1 # tracks how spread out the mines are from each other - 0 = high density (clustered), 1 = spread out
     }
 
@@ -98,7 +103,7 @@ def neighbors(state, r, c):
                 yield rr, cc
 
 def reveal(state, r, c) -> Tuple[bool, str]:
-    """Reveal a cell. Returns (finished, message)."""
+    # reveal a cell, returns (finished, message)
     state["ai_hit_bomb"] = False
     if not state["playing"]:
         return True, "Game finished."
@@ -109,24 +114,24 @@ def reveal(state, r, c) -> Tuple[bool, str]:
         return False, "Already revealed."
     cell["revealed"] = True
     
-    # Check for mine hit first (Game Over)
+    # check for mine hit first (Game Over)
     if cell["mine"]:
         state["playing"] = False
         if state["current_turn"] == "ai":
             state["ai_hit_bomb"] = True
         return True, "Mine hit!"
-        
-    # Perform flood fill for safe empty cells
-    if cell["srr"] == 0:
-        flood_fill(state, r, c) # <--- Flood fill completes the move
 
-    # Now, check for a win after the cell (or multiple cells) has been revealed
+    # perform flood fill for safe empty cells
+    if cell["srr"] == 0:
+        flood_fill(state, r, c) # <--- flood fill completes the move
+
+    # check for a win after the cell (or multiple cells) has been revealed
     if check_win(state): 
         state["playing"] = False
         state["won"] = True
         return True, "You won!"
     
-    # Switch turns if game is still playing and AI is enabled
+    # switch turns if game is still playing and AI is enabled
     if state["playing"] and state.get("ai_enabled", True) and state["current_turn"] == "human":
         state["current_turn"] = "ai"
     
@@ -184,8 +189,8 @@ def ai_make_move(state) -> Tuple[bool, str]:
     return False, "Unknown AI difficulty."
 
 def ai_easy_move(state) -> Tuple[bool, str]:
-    
-    # Get all valid cells (not revealed, not flagged)
+
+    # get all valid cells (not revealed, not flagged)
     valid_cells = []
     for r in range(state["size"]):
         for c in range(state["size"]):
@@ -195,15 +200,15 @@ def ai_easy_move(state) -> Tuple[bool, str]:
     
     if not valid_cells:
         return False, "No valid moves for AI."
-    
-    # Pick a random valid cell
+
+    # pick a random valid cell
     r, c = random.choice(valid_cells)
-    
-    # Make the move
+
+    # make the move
     finished, message = reveal(state, r, c)
-    
-    # Switch turn back to human after AI move
-    if state["playing"]: 
+
+    # switch turn back to human after AI move
+    if state["playing"]:
         state["current_turn"] = "human"
     
     return finished, f"AI revealed ({r}, {c}): {message}"
@@ -222,7 +227,7 @@ def ai_medium_move(state) -> Tuple[bool, str]:
             for c in range(state["size"]):
                 cell = state["grid"][r][c]
                 if cell["revealed"] and cell["srr"] > 0:
-                    # Get neighbors
+                    # get neighbors
                     hidden_neighbors = []
                     flagged_neighbors = []
                     
@@ -233,8 +238,8 @@ def ai_medium_move(state) -> Tuple[bool, str]:
                                 flagged_neighbors.append((nr, nc))
                             else:
                                 hidden_neighbors.append((nr, nc))
-                    
-                    # If hidden neighbors count equals cell's number, flag all hidden neighbors
+
+                    # if hidden neighbors count equals cell's number, flag all hidden neighbors
                     if len(hidden_neighbors) == cell["srr"]:
                         # Flag the first hidden neighbor
                         fr, fc = hidden_neighbors[0]
@@ -246,8 +251,8 @@ def ai_medium_move(state) -> Tuple[bool, str]:
             
             if flag_placed_this_iteration:
                 break
-        
-        # If no flag was placed this iteration, break out of the flagging loop
+
+        # if no flag was placed this iteration, break out of the flagging loop
         if not flag_placed_this_iteration:
             break
     
@@ -256,7 +261,7 @@ def ai_medium_move(state) -> Tuple[bool, str]:
         for c in range(state["size"]):
             cell = state["grid"][r][c]
             if cell["revealed"] and cell["srr"] > 0:
-                # Get neighbors
+                # get neighbors
                 hidden_neighbors = []
                 flagged_neighbors = []
                 
@@ -273,15 +278,15 @@ def ai_medium_move(state) -> Tuple[bool, str]:
                     hr, hc = hidden_neighbors[0]
                     finished, message = reveal(state, hr, hc)
                     actions_taken.append(f"revealed ({hr}, {hc})")
-                    
-                    # Switch turn back to human after AI move
+
+                    # switch turn back to human after AI move
                     if state["playing"]:
                         state["current_turn"] = "human"
                     
                     action_summary = ", ".join(actions_taken)
                     return finished, f"AI (Medium) {action_summary}: {message}"
-    
-    # If we placed flags but couldn't find a safe reveal, must pick a random cell
+
+    # if we placed flags but couldn't find a safe reveal, must pick a random cell
     if flags_placed > 0:
         valid_cells = []
         for r in range(state["size"]):
@@ -294,8 +299,8 @@ def ai_medium_move(state) -> Tuple[bool, str]:
             r, c = random.choice(valid_cells)
             finished, message = reveal(state, r, c)
             actions_taken.append(f"revealed random ({r}, {c})")
-            
-            # Switch turn back to human after AI move
+
+            # switch turn back to human after AI move
             if state["playing"]:
                 state["current_turn"] = "human"
             
@@ -312,21 +317,21 @@ def ai_medium_move(state) -> Tuple[bool, str]:
     
     if not valid_cells:
         return False, "No valid moves for AI."
-    
-    # Pick a random valid cell
+
+    # pick a random valid cell
     r, c = random.choice(valid_cells)
-    
-    # Make the move
+
+    # make the move
     finished, message = reveal(state, r, c)
-    
-    # Switch turn back to human after AI move
+
+    # switch turn back to human after AI move
     if state["playing"]:
         state["current_turn"] = "human"
     
     return finished, f"AI (Medium) revealed random cell ({r}, {c}): {message}"
 
 def ai_hard_move(state) -> Tuple[bool, str]:
-    # Get all valid cells that are safe (not revealed, not flagged, and not mines)
+    # get all valid cells that are safe (not revealed, not flagged, and not mines)
     safe_cells = []
     for r in range(state["size"]):
         for c in range(state["size"]):
@@ -335,7 +340,7 @@ def ai_hard_move(state) -> Tuple[bool, str]:
                 safe_cells.append((r, c))
     
     if not safe_cells:
-        # If no safe cells available, fall back to any valid cell 
+        # if no safe cells available, fall back to any valid cell
         valid_cells = []
         for r in range(state["size"]):
             for c in range(state["size"]):
@@ -348,28 +353,28 @@ def ai_hard_move(state) -> Tuple[bool, str]:
         
         r, c = random.choice(valid_cells)
     else:
-        # Pick a random safe cell (AI "cheats" by knowing which cells are safe)
+        # pick a random safe cell (AI "cheats" by knowing which cells are safe)
         r, c = random.choice(safe_cells)
-    
-    # Make the move
+
+    # make the move
     finished, message = reveal(state, r, c)
-    
-    # Switch turn back to human after AI move
-    if state["playing"] and state["ai_difficulty"] != "solver":  
+
+    # switch turn back to human after AI move
+    if state["playing"] and state["ai_difficulty"] != "solver":
         state["current_turn"] = "human"
     
     return finished, f"AI (Hard) revealed safe cell ({r}, {c}): {message}"
-    
-# Find a safe cell to reveal for the player
-def safe_space_hint(state) -> Optional[Tuple[int, int]]:
-    
-    if "hints_left" not in state: # Default hints
-        state["hints_left"] = 3  
 
-    if state["hints_left"] <= 0: # No hints left, return none
+# find a safe cell to reveal for the player
+def safe_space_hint(state) -> Optional[Tuple[int, int]]:
+
+    if "hints_left" not in state: # default hints
+        state["hints_left"] = 3
+
+    if state["hints_left"] <= 0: # no hints left, return none
         return None
 
-    # Find all safe cells (not revealed, flagged, or mined)
+    # find all safe cells (not revealed, flagged, or mined)
     safe_cells = [
         (r, c)
         for r in range(state["size"])
@@ -382,13 +387,13 @@ def safe_space_hint(state) -> Optional[Tuple[int, int]]:
     if not safe_cells:
         return None
     
-    # Pick random safe cell to reveal, and decrement hints available
+    # pick random safe cell to reveal, and decrement hints available
     r, c = random.choice(safe_cells)
     reveal(state, r, c)
     state["hints_left"] -= 1
     return (r, c)
 
-# Utilize the AI hard mode to solve the board
+# utilize the AI hard mode to solve the board
 def solver_mode(state) -> List[Tuple[int, int]]:
     finished, message = ai_hard_move(state)
     return (finished, message)

@@ -1,9 +1,11 @@
-
 import pygame
 import sys
+
 '''
-Initilizes mine selector page screen size and button/text positioning
+Module: mineSelector
+Description: UI for selecting mine count and density prior to starting a new game
 '''
+
 pygame.init()
 
 # colors
@@ -36,9 +38,8 @@ density_button = pygame.Rect(WIDTH//2 - 80, start_button.y - (40+10), 160, 40)
 DENSITY_LABELS = {0: "Dense", 1: "Spread"}
 
 def draw_menu(state, mine_count):
-    '''
-    Draws how the mine selector looks ie. the increase/decrease buttons and tracking mine count
-    '''
+    # draws how the mine selector looks ie. the increase/decrease buttons and tracking mine count
+    
     screen.fill(WHITE)
 
     # title
@@ -85,11 +86,7 @@ def draw_menu(state, mine_count):
 
 
 def run(mine_count, state): 
-    '''
-    Executes drawing the menu and handles user input
-    of increasing/decreasing mine count and
-    starting game (achived by updating state w/ GameStaeManager)
-    '''
+    # executes drawing the menu and handles user input of increasing/decreasing mine count and starting game (achived by updating state w/ GameStateManager)
     clock = pygame.time.Clock()
     while True:
         draw_menu(state, mine_count)
